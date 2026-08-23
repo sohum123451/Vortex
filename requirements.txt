@@ -1,0 +1,10 @@
+discord.py
+google-genai
+python-dotenv
+aiohttp
+groq
+flask
+jishaku
+yt-dlp
+pynacl
+davey

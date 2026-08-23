@@ -1,0 +1,10 @@
+.env
+*.pem
+*.key
+*.db
+__pycache__/
+*.pyc
+.venv/
+venv/
+.agents/
+.gemini/
