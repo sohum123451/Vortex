@@ -30,13 +30,13 @@ ffmpeg_options = {
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 
 RADIO_STREAMS = {
-    "lofi": ("https://stream.zeno.fm/f3wvbbqmdg8uv", "Lofi Hip Hop Chill Beats ☕"),
-    "synthwave": ("https://stream.zeno.fm/7cvs80ydg8uv", "Synthwave / Cyberpunk 80s 🌌"),
-    "anime": ("https://stream.zeno.fm/7k935mub11zuv", "Anime OST & J-Pop Hits 🌸"),
-    "chill": ("https://stream.zeno.fm/0r0xa792kwzuv", "Chillout Lounge & Ambient 🍃"),
-    "jazz": ("https://stream.zeno.fm/0k296dvdg8uv", "Smooth Coffee Jazz 🎷"),
-    "classical": ("https://stream.zeno.fm/e2vvbbqmdg8uv", "Peaceful Classical Piano 🎹"),
-    "gaming": ("https://stream.zeno.fm/65q750ydg8uv", "Epic Gaming Bass & Electro 🎮"),
+    "lofi": ("https://stream.zeno.fm/f3wvbbqmdg8uv", "Lofi Hip Hop Chill Beats ☕", 1.5),
+    "synthwave": ("https://stream.zeno.fm/7cvs80ydg8uv", "Synthwave / Cyberpunk 80s 🌌", 1.0),
+    "anime": ("https://stream.zeno.fm/7k935mub11zuv", "Anime OST & J-Pop Hits 🌸", 1.0),
+    "chill": ("https://stream.zeno.fm/0r0xa792kwzuv", "Chillout Lounge & Ambient 🍃", 1.3),
+    "jazz": ("https://stream.zeno.fm/0k296dvdg8uv", "Smooth Coffee Jazz 🎷", 1.3),
+    "classical": ("https://stream.zeno.fm/e2vvbbqmdg8uv", "Peaceful Classical Piano 🎹", 1.5),
+    "gaming": ("https://stream.zeno.fm/65q750ydg8uv", "Epic Gaming Bass & Electro 🎮", 0.8),
 }
 
 class YTDLSource(discord.PCMVolumeTransformer):
@@ -75,7 +75,7 @@ class MusicPlayerState:
         self.voice_client = None
         self.loop_single = False
         self.loop_queue = False
-        self.volume = 0.5
+        self.volume = 0.7
 
 class MusicControls(discord.ui.View):
     def __init__(self, cog, ctx):
@@ -391,20 +391,26 @@ class Music(commands.Cog):
     async def start_radio(self, ctx, radio_key: str):
         if not await self.ensure_voice(ctx):
             return
-        url, title = RADIO_STREAMS[radio_key]
+        url, title, vol_factor = RADIO_STREAMS[radio_key]
         state = self.get_state(ctx.guild.id)
         state.queue.clear()
         source = YTDLSource.from_url(url, title)
-        source.volume = state.volume
+        source.volume = min(state.volume * vol_factor, 2.0)
         state.current = source
         vc = ctx.guild.voice_client
         if vc.is_playing() or vc.is_paused():
             vc.stop()
         vc.play(source)
         
+        calculated_vol = int(source.volume * 100)
         embed = discord.Embed(
             title="📻 24/7 Live Web Radio Started",
-            description=f"🎶 **Station:** `{title}`\n🔊 **Stream:** `{url}`",
+            description=(
+                f"🎶 **Station:** `{title}`\n"
+                f"🔊 **Stream:** `{url}`\n"
+                f"🎚️ **Current Volume:** `{calculated_vol}%` (optimized for this stream)\n\n"
+                f"💡 *Tip: You can adjust the volume anytime using `/volume <1-100>` (or `&volume <1-100>`).*"
+            ),
             color=0x9B59B6,
         )
         await ctx.reply(embed=embed, view=MusicControls(self, ctx))
