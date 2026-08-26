@@ -30,13 +30,13 @@ ffmpeg_options = {
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 
 RADIO_STREAMS = {
-    "lofi": ("https://stream.zeno.fm/f3wvbbqmdg8uv", "Lofi Hip Hop Chill Beats ☕", 1.5),
-    "synthwave": ("https://stream.zeno.fm/7cvs80ydg8uv", "Synthwave / Cyberpunk 80s 🌌", 1.0),
-    "anime": ("https://stream.zeno.fm/7k935mub11zuv", "Anime OST & J-Pop Hits 🌸", 1.0),
-    "chill": ("https://stream.zeno.fm/0r0xa792kwzuv", "Chillout Lounge & Ambient 🍃", 1.3),
-    "jazz": ("https://stream.zeno.fm/0k296dvdg8uv", "Smooth Coffee Jazz 🎷", 1.3),
-    "classical": ("https://stream.zeno.fm/e2vvbbqmdg8uv", "Peaceful Classical Piano 🎹", 1.5),
-    "gaming": ("https://stream.zeno.fm/65q750ydg8uv", "Epic Gaming Bass & Electro 🎮", 0.8),
+    "lofi": ("https://stream.zeno.fm/f3wvbbqmdg8uv", "Lofi Hip Hop Chill Beats ☕", 0.6),
+    "synthwave": ("https://stream.zeno.fm/7cvs80ydg8uv", "Synthwave / Cyberpunk 80s 🌌", 0.8),
+    "anime": ("https://stream.zeno.fm/7k935mub11zuv", "Anime OST & J-Pop Hits 🌸", 0.8),
+    "chill": ("https://stream.zeno.fm/0r0xa792kwzuv", "Chillout Lounge & Ambient 🍃", 0.7),
+    "jazz": ("https://stream.zeno.fm/0k296dvdg8uv", "Smooth Coffee Jazz 🎷", 0.7),
+    "classical": ("https://stream.zeno.fm/e2vvbbqmdg8uv", "Peaceful Classical Piano 🎹", 0.7),
+    "gaming": ("https://stream.zeno.fm/65q750ydg8uv", "Epic Gaming Bass & Electro 🎮", 0.6),
 }
 
 class YTDLSource(discord.PCMVolumeTransformer):
@@ -182,7 +182,7 @@ class Music(commands.Cog):
             await ctx.guild.voice_client.move_to(ctx.author.voice.channel)
         return True
 
-    @commands.hybrid_command(name="play", description="Play a song from YouTube, Spotify link, or search keyword")
+    @commands.hybrid_command(name="play", aliases=["p", "start"], description="Play a song from YouTube, Spotify link, or search keyword")
     async def play(self, ctx, *, query: str):
         if not await self.ensure_voice(ctx):
             return
@@ -219,7 +219,7 @@ class Music(commands.Cog):
                 embed.set_thumbnail(url=source.thumbnail)
             await ctx.reply(embed=embed, view=MusicControls(self, ctx))
 
-    @commands.hybrid_command(name="pause", description="Pause the currently playing music")
+    @commands.hybrid_command(name="pause", aliases=["ps", "hold"], description="Pause the currently playing music")
     async def pause(self, ctx):
         vc = ctx.guild.voice_client
         if vc and vc.is_playing():
@@ -228,7 +228,7 @@ class Music(commands.Cog):
         else:
             await ctx.reply("❌ Nothing is currently playing.")
 
-    @commands.hybrid_command(name="resume", description="Resume paused music")
+    @commands.hybrid_command(name="resume", aliases=["r", "unpause"], description="Resume paused music")
     async def resume(self, ctx):
         vc = ctx.guild.voice_client
         if vc and vc.is_paused():
@@ -237,7 +237,7 @@ class Music(commands.Cog):
         else:
             await ctx.reply("❌ Music is not paused.")
 
-    @commands.hybrid_command(name="skip", description="Skip to the next song in the queue")
+    @commands.hybrid_command(name="skip", aliases=["s", "next"], description="Skip to the next song in the queue")
     async def skip(self, ctx):
         vc = ctx.guild.voice_client
         if vc and (vc.is_playing() or vc.is_paused()):
@@ -246,7 +246,7 @@ class Music(commands.Cog):
         else:
             await ctx.reply("❌ Nothing to skip.")
 
-    @commands.hybrid_command(name="stop", description="Stop music and clear the entire playlist queue")
+    @commands.hybrid_command(name="stop", aliases=["dc", "disconnect", "leave"], description="Stop music and clear the entire playlist queue")
     async def stop(self, ctx):
         state = self.get_state(ctx.guild.id)
         state.queue.clear()
@@ -258,7 +258,7 @@ class Music(commands.Cog):
         else:
             await ctx.reply("❌ Bot is not in a voice channel.")
 
-    @commands.hybrid_command(name="queue", description="Display all songs currently in the queue")
+    @commands.hybrid_command(name="queue", aliases=["q", "list"], description="Display all songs currently in the queue")
     async def queue(self, ctx):
         state = self.get_state(ctx.guild.id)
         if not state.current and not state.queue:
@@ -280,7 +280,7 @@ class Music(commands.Cog):
         embed = discord.Embed(title=f"🎶 Music Queue — {ctx.guild.name}", description="\n".join(desc), color=MAIN_COLOR)
         await ctx.reply(embed=embed)
 
-    @commands.hybrid_command(name="nowplaying", aliases=["np"], description="Show details of the song currently playing")
+    @commands.hybrid_command(name="nowplaying", aliases=["np", "song", "current"], description="Show details of the song currently playing")
     async def nowplaying(self, ctx):
         state = self.get_state(ctx.guild.id)
         if not state.current:
@@ -296,7 +296,7 @@ class Music(commands.Cog):
             embed.set_thumbnail(url=song.thumbnail)
         await ctx.reply(embed=embed, view=MusicControls(self, ctx))
 
-    @commands.hybrid_command(name="volume", description="Set playback volume (1-100%): &volume 80")
+    @commands.hybrid_command(name="volume", aliases=["vol", "v"], description="Set playback volume (1-100%): &volume 80")
     async def volume(self, ctx, vol: int):
         if not 1 <= vol <= 100:
             return await ctx.reply("❌ Volume must be between 1 and 100.")
@@ -307,21 +307,21 @@ class Music(commands.Cog):
             vc.source.volume = state.volume
         await ctx.reply(f"🔊 Volume set to **{vol}%**.")
 
-    @commands.command(name="loop", description="Toggle single song looping")
+    @commands.command(name="loop", aliases=["lp", "repeat"], description="Toggle single song looping")
     async def loop(self, ctx):
         state = self.get_state(ctx.guild.id)
         state.loop_single = not state.loop_single
         mode = "Enabled 🔂" if state.loop_single else "Disabled ❌"
         await ctx.reply(f"🔂 Single song loop: **{mode}**")
 
-    @commands.command(name="loopqueue", description="Toggle full queue looping")
+    @commands.command(name="loopqueue", aliases=["lq", "loopall", "repeatall"], description="Toggle full queue looping")
     async def loopqueue(self, ctx):
         state = self.get_state(ctx.guild.id)
         state.loop_queue = not state.loop_queue
         mode = "Enabled 🔁" if state.loop_queue else "Disabled ❌"
         await ctx.reply(f"🔁 Queue loop: **{mode}**")
 
-    @commands.command(name="shuffle", description="Randomly shuffle the order of songs in queue")
+    @commands.command(name="shuffle", aliases=["shf", "mix"], description="Randomly shuffle the order of songs in queue")
     async def shuffle(self, ctx):
         import random
         state = self.get_state(ctx.guild.id)
@@ -330,7 +330,7 @@ class Music(commands.Cog):
         random.shuffle(state.queue)
         await ctx.reply(f"🔀 Shuffled **{len(state.queue)}** songs in queue.")
 
-    @commands.command(name="remove", description="Remove a specific song from queue: &remove <index>")
+    @commands.command(name="remove", aliases=["rm", "delete", "del"], description="Remove a specific song from queue: &remove <index>")
     async def remove(self, ctx, index: int):
         state = self.get_state(ctx.guild.id)
         if not 1 <= index <= len(state.queue):
@@ -338,19 +338,19 @@ class Music(commands.Cog):
         removed = state.queue.pop(index - 1)
         await ctx.reply(f"🗑️ Removed **{removed.title}** from queue.")
 
-    @commands.command(name="clear_queue", description="Clear all upcoming songs from queue")
+    @commands.command(name="clear_queue", aliases=["cq", "clear"], description="Clear all upcoming songs from queue")
     async def clear_queue(self, ctx):
         state = self.get_state(ctx.guild.id)
         count = len(state.queue)
         state.queue.clear()
         await ctx.reply(f"🧹 Cleared **{count}** songs from queue.")
 
-    @commands.command(name="join_vc", description="Make the bot join your active voice channel")
+    @commands.command(name="join_vc", aliases=["join", "connect"], description="Make the bot join your active voice channel")
     async def join_vc(self, ctx):
         if await self.ensure_voice(ctx):
             await ctx.reply(f"🔊 Joined voice channel: **{ctx.author.voice.channel.name}**")
 
-    @commands.command(name="leave_vc", description="Disconnect the bot from voice channel")
+    @commands.command(name="leave_vc", aliases=["leave", "dc", "disconnect"], description="Disconnect the bot from voice channel")
     async def leave_vc(self, ctx):
         vc = ctx.guild.voice_client
         if vc:
@@ -360,31 +360,31 @@ class Music(commands.Cog):
             await ctx.reply("❌ Not connected to any voice channel.")
 
     # 24/7 Web Radios
-    @commands.command(name="radio_lofi", description="Stream 24/7 Lofi Hip Hop Beats radio")
+    @commands.command(name="radio_lofi", aliases=["lofi", "rl"], description="Stream 24/7 Lofi Hip Hop Beats radio")
     async def radio_lofi(self, ctx):
         await self.start_radio(ctx, "lofi")
 
-    @commands.command(name="radio_synthwave", description="Stream 24/7 Synthwave & Retrowave radio")
+    @commands.command(name="radio_synthwave", aliases=["synthwave", "rs"], description="Stream 24/7 Synthwave & Retrowave radio")
     async def radio_synthwave(self, ctx):
         await self.start_radio(ctx, "synthwave")
 
-    @commands.command(name="radio_anime", description="Stream 24/7 Anime OST & J-Pop radio")
+    @commands.command(name="radio_anime", aliases=["anime", "ra"], description="Stream 24/7 Anime OST & J-Pop radio")
     async def radio_anime(self, ctx):
         await self.start_radio(ctx, "anime")
 
-    @commands.command(name="radio_chill", description="Stream 24/7 Chillout Lounge radio")
+    @commands.command(name="radio_chill", aliases=["chill", "rc"], description="Stream 24/7 Chillout Lounge radio")
     async def radio_chill(self, ctx):
         await self.start_radio(ctx, "chill")
 
-    @commands.command(name="radio_jazz", description="Stream 24/7 Smooth Coffee Jazz radio")
+    @commands.command(name="radio_jazz", aliases=["jazz", "rj"], description="Stream 24/7 Smooth Coffee Jazz radio")
     async def radio_jazz(self, ctx):
         await self.start_radio(ctx, "jazz")
 
-    @commands.command(name="radio_classical", description="Stream 24/7 Peaceful Classical Piano radio")
+    @commands.command(name="radio_classical", aliases=["classical", "piano", "rcp"], description="Stream 24/7 Peaceful Classical Piano radio")
     async def radio_classical(self, ctx):
         await self.start_radio(ctx, "classical")
 
-    @commands.command(name="radio_gaming", description="Stream 24/7 Epic Gaming Beats radio")
+    @commands.command(name="radio_gaming", aliases=["gaming", "rg"], description="Stream 24/7 Epic Gaming Beats radio")
     async def radio_gaming(self, ctx):
         await self.start_radio(ctx, "gaming")
 
