@@ -16,7 +16,7 @@ if sys.platform == "win32":
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, jsonify, render_template, request
 from utils import DB_FILE, MAIN_COLOR, ERROR_COLOR
 
 load_dotenv()
@@ -24,11 +24,201 @@ load_dotenv()
 # ==========================================
 # 🌐 FLASK KEEP ALIVE SERVER
 # ==========================================
-app = Flask("")
+app = Flask("", static_folder="static", template_folder="templates")
 
 @app.route("/")
 def home():
-    return "⚡ Vortex Discord Bot is running & fully operational!"
+    return render_template("dashboard.html")
+
+@app.route("/api/stats")
+def get_stats():
+    if not bot.is_ready():
+        return jsonify({
+            "ready": False,
+            "guilds": 0,
+            "users": 0,
+            "ping": 0,
+            "uptime": "0h 0m"
+        })
+    
+    uptime_delta = datetime.now(timezone.utc) - bot.start_time
+    hours, remainder = divmod(int(uptime_delta.total_seconds()), 3600)
+    minutes, seconds = divmod(remainder, 60)
+    uptime_str = f"{hours}h {minutes}m {seconds}s"
+    
+    total_levels_users = 0
+    total_coins_in_circulation = 0
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT COUNT(*) FROM levels")
+            total_levels_users = cur.fetchone()[0]
+            cur.execute("SELECT SUM(balance + bank) FROM economy")
+            res = cur.fetchone()[0]
+            total_coins_in_circulation = res if res else 0
+    except Exception:
+        pass
+        
+    return jsonify({
+        "ready": True,
+        "guilds": len(bot.guilds),
+        "users": sum(len(g.members) for g in bot.guilds),
+        "ping": int(bot.latency * 1000),
+        "uptime": uptime_str,
+        "db_records": {
+            "levels_users": total_levels_users,
+            "coins": total_coins_in_circulation
+        }
+    })
+
+@app.route("/api/leaderboards")
+def get_leaderboards():
+    economy_leaderboard = []
+    levels_leaderboard = []
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT user_id, balance, bank FROM economy ORDER BY (balance + bank) DESC LIMIT 10")
+            for row in cur.fetchall():
+                user_id = row[0]
+                user = bot.get_user(int(user_id)) if bot.is_ready() else None
+                username = user.name if user else f"User {user_id}"
+                economy_leaderboard.append({
+                    "username": username,
+                    "balance": row[1],
+                    "bank": row[2],
+                    "total": row[1] + row[2]
+                })
+                
+            cur.execute("SELECT user_id, level, xp FROM levels ORDER BY xp DESC LIMIT 10")
+            for row in cur.fetchall():
+                user_id = row[0]
+                user = bot.get_user(int(user_id)) if bot.is_ready() else None
+                username = user.name if user else f"User {user_id}"
+                levels_leaderboard.append({
+                    "username": username,
+                    "level": row[1],
+                    "xp": row[2]
+                })
+    except Exception as e:
+        print(f"Error reading leaderboards for API: {e}")
+        
+    return jsonify({
+        "economy": economy_leaderboard,
+        "levels": levels_leaderboard
+    })
+
+@app.route("/api/music/state")
+def get_music_state():
+    if not bot.is_ready():
+        return jsonify({"guilds": []})
+        
+    music_cog = bot.get_cog("Music")
+    if not music_cog:
+        return jsonify({"guilds": []})
+        
+    result = []
+    for guild_id, state in music_cog.states.items():
+        guild = bot.get_guild(guild_id)
+        if not guild:
+            continue
+            
+        current_track = None
+        if state.current:
+            current_track = {
+                "title": state.current.title,
+                "url": state.current.webpage_url,
+                "uploader": state.current.uploader,
+                "duration": state.current.duration
+            }
+            
+        queue = []
+        for s in state.queue:
+            queue.append({
+                "title": s.title,
+                "duration": s.duration
+            })
+            
+        vc = guild.voice_client
+        is_playing = vc.is_playing() if vc else False
+        is_paused = vc.is_paused() if vc else False
+        
+        result.append({
+            "guild_id": str(guild_id),
+            "guild_name": guild.name,
+            "active": vc is not None,
+            "is_playing": is_playing,
+            "is_paused": is_paused,
+            "volume": int(state.volume * 100),
+            "current": current_track,
+            "queue": queue
+        })
+        
+    return jsonify({"guilds": result})
+
+@app.route("/api/music/control", methods=["POST"])
+def control_music():
+    if not bot.is_ready():
+        return jsonify({"error": "Bot is not ready"}), 400
+        
+    data = request.json or {}
+    guild_id_str = data.get("guild_id")
+    action = data.get("action")
+    
+    if not guild_id_str or not action:
+        return jsonify({"error": "Missing guild_id or action"}), 400
+        
+    try:
+        guild_id = int(guild_id_str)
+    except ValueError:
+        return jsonify({"error": "Invalid guild_id"}), 400
+        
+    guild = bot.get_guild(guild_id)
+    if not guild:
+        return jsonify({"error": "Guild not found"}), 404
+        
+    music_cog = bot.get_cog("Music")
+    if not music_cog:
+        return jsonify({"error": "Music cog not loaded"}), 500
+        
+    state = music_cog.get_state(guild_id)
+    vc = guild.voice_client
+    
+    if action == "pause":
+        if vc and vc.is_playing():
+            vc.pause()
+            return jsonify({"status": "paused"})
+        return jsonify({"error": "Not playing"}), 400
+        
+    elif action == "resume":
+        if vc and vc.is_paused():
+            vc.resume()
+            return jsonify({"status": "resumed"})
+        return jsonify({"error": "Not paused"}), 400
+        
+    elif action == "skip":
+        if vc and (vc.is_playing() or vc.is_paused()):
+            vc.stop()
+            return jsonify({"status": "skipped"})
+        return jsonify({"error": "Nothing to skip"}), 400
+        
+    elif action == "volume":
+        vol_val = data.get("value")
+        if vol_val is None:
+            return jsonify({"error": "Missing volume value"}), 400
+        try:
+            vol = int(vol_val)
+            if not 1 <= vol <= 100:
+                raise ValueError()
+        except ValueError:
+            return jsonify({"error": "Volume must be 1-100"}), 400
+            
+        state.volume = vol / 100
+        if vc and vc.source:
+            vc.source.volume = state.volume
+        return jsonify({"status": "volume_set", "value": vol})
+        
+    return jsonify({"error": "Invalid action"}), 400
 
 def run():
     app.run(host="0.0.0.0", port=8080)

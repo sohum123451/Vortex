@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vortex Discord Bot - Dashboard</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- 🧭 SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <span class="logo-icon"><i class="fa-solid fa-bolt"></i></span>
+                    <h1 class="logo-text">VORTEX</h1>
+                </div>
+                <div class="status-badge" id="bot-status-badge">
+                    <span class="pulse-dot"></span>
+                    <span class="status-label">Online</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#overview" class="nav-link active" data-tab="overview">
+                    <i class="fa-solid fa-chart-simple"></i>
+                    <span>Overview</span>
+                </a>
+                <a href="#music" class="nav-link" data-tab="music">
+                    <i class="fa-solid fa-music"></i>
+                    <span>Music Player</span>
+                </a>
+                <a href="#leaderboards" class="nav-link" data-tab="leaderboards">
+                    <i class="fa-solid fa-trophy"></i>
+                    <span>Leaderboards</span>
+                </a>
+                <a href="#docs" class="nav-link" data-tab="docs">
+                    <i class="fa-solid fa-book-open"></i>
+                    <span>Commands & Docs</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div class="user-details">
+                        <span class="username">Vortex v2.4</span>
+                        <span class="user-status">Host Status: Active</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 🖥️ MAIN CONTENT AREA -->
+        <main class="main-content">
+            <!-- 📊 TAB 1: OVERVIEW -->
+            <section id="tab-overview" class="tab-pane active">
+                <div class="section-header">
+                    <h2>System Overview</h2>
+                    <p>Live health statistics and database diagnostics for Vortex Bot.</p>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon purple"><i class="fa-solid fa-server"></i></div>
+                        <div class="stat-details">
+                            <span class="stat-value" id="stat-guilds">0</span>
+                            <span class="stat-label">Total Guilds</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon blue"><i class="fa-solid fa-users"></i></div>
+                        <div class="stat-details">
+                            <span class="stat-value" id="stat-users">0</span>
+                            <span class="stat-label">Total Users</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green"><i class="fa-solid fa-gauge-high"></i></div>
+                        <div class="stat-details">
+                            <span class="stat-value" id="stat-ping">0ms</span>
+                            <span class="stat-label">API Latency</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon orange"><i class="fa-solid fa-clock"></i></div>
+                        <div class="stat-details">
+                            <span class="stat-value" id="stat-uptime">0h 0m</span>
+                            <span class="stat-label">System Uptime</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-rows-grid">
+                    <!-- DB Stats Box -->
+                    <div class="data-box database-diagnostics">
+                        <h3><i class="fa-solid fa-database"></i> Database Diagnostics</h3>
+                        <div class="db-stats-list">
+                            <div class="db-stat-item">
+                                <span class="label">Total Leveled Users</span>
+                                <span class="val" id="db-level-users">0</span>
+                            </div>
+                            <div class="db-stat-item">
+                                <span class="label">Coins in Economy</span>
+                                <span class="val" id="db-coins">0</span>
+                            </div>
+                            <div class="db-stat-item">
+                                <span class="label">Database Type</span>
+                                <span class="val font-mono">SQLite 3</span>
+                            </div>
+                            <div class="db-stat-item">
+                                <span class="label">Integration State</span>
+                                <span class="val text-success">Synchronized</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Info -->
+                    <div class="data-box info-box">
+                        <h3><i class="fa-solid fa-circle-info"></i> Project Details</h3>
+                        <p>Vortex is fully integrated with cutting-edge modules including live audio streams, Google Gemini AI modules, customized trivia systems, and advanced leveling cogs.</p>
+                        <div class="info-badges">
+                            <span class="badge">python 3.10+</span>
+                            <span class="badge">discord.py v2</span>
+                            <span class="badge">gemini-api</span>
+                            <span class="badge">ytdl-core</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 🎵 TAB 2: MUSIC CONTROLLER -->
+            <section id="tab-music" class="tab-pane">
+                <div class="section-header">
+                    <h2>Voice & Music Console</h2>
+                    <p>Track current playing status and manage music queues in active channels.</p>
+                </div>
+
+                <div class="music-layout">
+                    <!-- Player Box -->
+                    <div class="music-card player-card">
+                        <div class="guild-selector-wrapper">
+                            <label for="music-guild-select">Active Connection:</label>
+                            <select id="music-guild-select" class="guild-dropdown">
+                                <option value="">No Active Guild Connections</option>
+                            </select>
+                        </div>
+                        
+                        <div id="player-active-view" class="player-view-wrapper hidden">
+                            <div class="now-playing-info">
+                                <div class="track-artwork">
+                                    <i class="fa-solid fa-compact-disc spin-animation"></i>
+                                </div>
+                                <div class="track-meta">
+                                    <h3 id="current-track-title" class="track-title">Loading Track...</h3>
+                                    <span id="current-track-uploader" class="track-artist">Artist</span>
+                                </div>
+                            </div>
+
+                            <!-- Progress (Fake/Stream Indication) -->
+                            <div class="progress-bar-container">
+                                <div class="stream-line"></div>
+                                <div class="progress-labels">
+                                    <span>0:00</span>
+                                    <span id="track-live-indicator" class="live-badge">LIVE STREAM</span>
+                                </div>
+                            </div>
+
+                            <!-- Player Controls -->
+                            <div class="player-controls">
+                                <button id="btn-pause-resume" class="control-btn play-pause"><i class="fa-solid fa-play"></i></button>
+                                <button id="btn-skip" class="control-btn"><i class="fa-solid fa-forward-step"></i></button>
+                            </div>
+
+                            <!-- Volume Slider -->
+                            <div class="volume-slider-container">
+                                <i class="fa-solid fa-volume-low" id="volume-icon"></i>
+                                <input type="range" id="player-volume" min="1" max="100" value="70" class="volume-range">
+                                <span id="volume-val-display" class="volume-num">70%</span>
+                            </div>
+                        </div>
+
+                        <div id="player-empty-view" class="player-view-wrapper empty-state">
+                            <i class="fa-solid fa-headphones"></i>
+                            <p>No active music streaming in any voice channels right now.</p>
+                            <span class="hint">Use `&play` or `&lofi` in Discord to connect the bot!</span>
+                        </div>
+                    </div>
+
+                    <!-- Queue Box -->
+                    <div class="music-card queue-card">
+                        <h3>Up Next</h3>
+                        <div class="queue-list-wrapper">
+                            <ul id="music-queue-list" class="queue-list">
+                                <li class="empty-queue">Queue is empty</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 🏆 TAB 3: LEADERBOARDS -->
+            <section id="tab-leaderboards" class="tab-pane">
+                <div class="section-header">
+                    <h2>Server Leaderboards</h2>
+                    <p>View the top active and wealthiest players from Vortex records.</p>
+                </div>
+
+                <div class="leaderboards-grid">
+                    <!-- XP Leaderboard -->
+                    <div class="leaderboard-card">
+                        <h3><i class="fa-solid fa-medal text-warning"></i> Levels & Activity</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Username</th>
+                                        <th>Level</th>
+                                        <th>Total XP</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="levels-leaderboard-body">
+                                    <tr><td colspan="4" class="loading">Loading data...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Economy Leaderboard -->
+                    <div class="leaderboard-card">
+                        <h3><i class="fa-solid fa-sack-dollar text-success"></i> Economy Wealth</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Username</th>
+                                        <th>Wallet</th>
+                                        <th>Bank</th>
+                                        <th>Net Worth</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="economy-leaderboard-body">
+                                    <tr><td colspan="5" class="loading">Loading data...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 📚 TAB 4: DOCS -->
+            <section id="tab-docs" class="tab-pane">
+                <div class="section-header">
+                    <h2>Command Reference & Aliases</h2>
+                    <p>A reference cheatsheet for Vortex commands and shortcuts.</p>
+                </div>
+
+                <div class="docs-wrapper">
+                    <div class="docs-search-bar">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="docs-search-input" placeholder="Search music or radio commands...">
+                    </div>
+
+                    <div class="table-container">
+                        <table class="docs-table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Command</th>
+                                    <th>Aliases / Shortcuts</th>
+                                    <th>Usage Examples</th>
+                                </tr>
+                            </thead>
+                            <tbody id="docs-table-body">
+                                <tr>
+                                    <td><span class="badge music-badge">Music</span></td>
+                                    <td><strong>play</strong></td>
+                                    <td>`p`, `start`</td>
+                                    <td>`&p study beats`, `/play lofi hiphop`</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge music-badge">Music</span></td>
+                                    <td><strong>volume</strong></td>
+                                    <td>`vol`, `v`</td>
+                                    <td>`&vol 50`, `/volume 80`</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge music-badge">Music</span></td>
+                                    <td><strong>skip</strong></td>
+                                    <td>`s`, `next`</td>
+                                    <td>`&s`, `/skip`</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge music-badge">Music</span></td>
+                                    <td><strong>nowplaying</strong></td>
+                                    <td>`np`, `song`, `current`</td>
+                                    <td>`&np`, `/nowplaying`</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge radio-badge">Radio</span></td>
+                                    <td><strong>radio_lofi</strong></td>
+                                    <td>`lofi`, `rl`</td>
+                                    <td>`&lofi`, `/radio_lofi`</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge radio-badge">Radio</span></td>
+                                    <td><strong>radio_synthwave</strong></td>
+                                    <td>`synthwave`, `rs`</td>
+                                    <td>`&rs`, `/radio_synthwave`</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge radio-badge">Radio</span></td>
+                                    <td><strong>radio_jazz</strong></td>
+                                    <td>`jazz`, `rj`</td>
+                                    <td>`&rj`, `/radio_jazz`</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge radio-badge">Radio</span></td>
+                                    <td><strong>radio_classical</strong></td>
+                                    <td>`classical`, `piano`, `rcp`</td>
+                                    <td>`&piano`, `/radio_classical`</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Script loading -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

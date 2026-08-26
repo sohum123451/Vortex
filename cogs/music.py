@@ -182,7 +182,7 @@ class Music(commands.Cog):
             await ctx.guild.voice_client.move_to(ctx.author.voice.channel)
         return True
 
-    @commands.hybrid_command(name="play", aliases=["p", "start"], description="Play a song from YouTube, Spotify link, or search keyword")
+    @commands.hybrid_command(name="play", aliases=["p"], description="Play a song from YouTube, Spotify link, or search keyword")
     async def play(self, ctx, *, query: str):
         if not await self.ensure_voice(ctx):
             return
@@ -237,7 +237,7 @@ class Music(commands.Cog):
         else:
             await ctx.reply("❌ Music is not paused.")
 
-    @commands.hybrid_command(name="skip", aliases=["s", "next"], description="Skip to the next song in the queue")
+    @commands.hybrid_command(name="skip", aliases=["s"], description="Skip to the next song in the queue")
     async def skip(self, ctx):
         vc = ctx.guild.voice_client
         if vc and (vc.is_playing() or vc.is_paused()):
@@ -246,7 +246,7 @@ class Music(commands.Cog):
         else:
             await ctx.reply("❌ Nothing to skip.")
 
-    @commands.hybrid_command(name="stop", aliases=["dc", "disconnect", "leave"], description="Stop music and clear the entire playlist queue")
+    @commands.hybrid_command(name="stop", aliases=["st"], description="Stop music and clear the entire playlist queue")
     async def stop(self, ctx):
         state = self.get_state(ctx.guild.id)
         state.queue.clear()
@@ -345,12 +345,12 @@ class Music(commands.Cog):
         state.queue.clear()
         await ctx.reply(f"🧹 Cleared **{count}** songs from queue.")
 
-    @commands.command(name="join_vc", aliases=["join", "connect"], description="Make the bot join your active voice channel")
+    @commands.command(name="join_vc", aliases=["connect", "joinvc"], description="Make the bot join your active voice channel")
     async def join_vc(self, ctx):
         if await self.ensure_voice(ctx):
             await ctx.reply(f"🔊 Joined voice channel: **{ctx.author.voice.channel.name}**")
 
-    @commands.command(name="leave_vc", aliases=["leave", "dc", "disconnect"], description="Disconnect the bot from voice channel")
+    @commands.command(name="leave_vc", aliases=["dc", "disconnect", "leavevc"], description="Disconnect the bot from voice channel")
     async def leave_vc(self, ctx):
         vc = ctx.guild.voice_client
         if vc:
@@ -368,7 +368,7 @@ class Music(commands.Cog):
     async def radio_synthwave(self, ctx):
         await self.start_radio(ctx, "synthwave")
 
-    @commands.command(name="radio_anime", aliases=["anime", "ra"], description="Stream 24/7 Anime OST & J-Pop radio")
+    @commands.command(name="radio_anime", aliases=["ra", "radioanime"], description="Stream 24/7 Anime OST & J-Pop radio")
     async def radio_anime(self, ctx):
         await self.start_radio(ctx, "anime")
 
