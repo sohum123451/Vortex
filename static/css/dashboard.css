@@ -867,3 +867,102 @@ td.loading {
 
 .badge.music-badge { background: rgba(142, 68, 173, 0.15); color: var(--color-primary-light); border-color: rgba(142, 68, 173, 0.3); }
 .badge.radio-badge { background: rgba(0, 210, 211, 0.15); color: var(--color-cyan); border-color: rgba(0, 210, 211, 0.3); }
+
+/* 🛡️ MODERATION PANEL STYLES */
+.moderation-layout {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 24px;
+}
+
+.moderation-box-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.moderation-box-header h3 {
+    margin-bottom: 0 !important;
+}
+
+.search-field-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 8px 12px;
+    width: 220px;
+}
+
+.search-field-wrapper i {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.search-field-wrapper input {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-family: var(--font-jakarta);
+    font-size: 0.85rem;
+    width: 100%;
+}
+
+/* ⚔️ RPG & AUTO-REPLY PANEL STYLES */
+.rpg-layout {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 24px;
+}
+
+.rpg-sub-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* 🎉 GIVEAWAYS & TICKETS PANEL STYLES */
+.features-layout {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 24px;
+}
+
+.config-modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-top: 24px;
+}
+
+.module-card-status {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.module-card-status .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--color-red);
+}
+
+.module-card-status .dot.active {
+    background-color: var(--color-green);
+    box-shadow: 0 0 8px var(--color-green);
+}
+
+.module-card-status .name {
+    font-size: 0.85rem;
+    font-weight: 600;
+}

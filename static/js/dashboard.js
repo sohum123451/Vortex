@@ -33,6 +33,12 @@ document.addEventListener("DOMContentLoaded", () => {
             // Trigger fetch once when switching to specific panels
             if (tabId === "leaderboards") {
                 fetchLeaderboards();
+            } else if (tabId === "moderation") {
+                fetchModeration();
+            } else if (tabId === "rpg") {
+                fetchRPG();
+            } else if (tabId === "features") {
+                fetchFeatures();
             }
         });
     });
@@ -319,4 +325,183 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     });
+
+    // ==========================================
+    // 🛡️ MODERATION DATA
+    // ==========================================
+    async function fetchModeration() {
+        const warningsBody = document.getElementById("warnings-table-body");
+        const tempbansBody = document.getElementById("tempbans-table-body");
+
+        try {
+            const res = await fetch("/api/moderation");
+            const data = await res.json();
+
+            // Populate Warnings
+            warningsBody.innerHTML = "";
+            if (data.warnings && data.warnings.length > 0) {
+                data.warnings.forEach(row => {
+                    const tr = document.createElement("tr");
+                    tr.classList.add("warning-row");
+                    tr.setAttribute("data-user-id", row.user_id);
+                    tr.innerHTML = `
+                        <td><code>#${row.id}</code></td>
+                        <td><code>${row.user_id}</code></td>
+                        <td><strong>${row.username}</strong></td>
+                        <td>${row.reason}</td>
+                        <td class="text-muted"><small>${row.timestamp}</small></td>
+                    `;
+                    warningsBody.appendChild(tr);
+                });
+            } else {
+                warningsBody.innerHTML = `<tr><td colspan="5" class="loading">No warnings logged yet.</td></tr>`;
+            }
+
+            // Populate Tempbans
+            tempbansBody.innerHTML = "";
+            if (data.tempbans && data.tempbans.length > 0) {
+                data.tempbans.forEach(row => {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td><code>${row.user_id}</code></td>
+                        <td><strong>${row.username}</strong></td>
+                        <td><code>${row.guild_id}</code></td>
+                        <td class="text-danger">${row.unban_time}</td>
+                    `;
+                    tempbansBody.appendChild(tr);
+                });
+            } else {
+                tempbansBody.innerHTML = `<tr><td colspan="4" class="loading">No active temporary bans.</td></tr>`;
+            }
+
+            // Setup search filter for warnings
+            const warningSearch = document.getElementById("warning-search-input");
+            warningSearch.addEventListener("input", () => {
+                const query = warningSearch.value.toLowerCase().trim();
+                const warningRows = document.querySelectorAll(".warning-row");
+                warningRows.forEach(row => {
+                    const userId = row.getAttribute("data-user-id") || "";
+                    if (userId.includes(query)) {
+                        row.style.display = "";
+                    } else {
+                        row.style.display = "none";
+                    }
+                });
+            });
+
+        } catch (err) {
+            console.error("Error loading moderation logs:", err);
+            warningsBody.innerHTML = `<tr><td colspan="5" class="loading text-danger">Failed to fetch warning logs.</td></tr>`;
+            tempbansBody.innerHTML = `<tr><td colspan="4" class="loading text-danger">Failed to fetch tempbans.</td></tr>`;
+        }
+    }
+
+    // ==========================================
+    // ⚔️ RPG ADVENTURERS
+    // ==========================================
+    async function fetchRPG() {
+        const rpgBody = document.getElementById("rpg-table-body");
+
+        try {
+            const res = await fetch("/api/rpg/players");
+            const data = await res.json();
+
+            rpgBody.innerHTML = "";
+            if (data.players && data.players.length > 0) {
+                data.players.forEach(row => {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td><strong>${row.username}</strong><br><small class="text-muted"><code>${row.user_id}</code></small></td>
+                        <td><span class="badge music-badge">${row.class}</span></td>
+                        <td><strong>Lvl ${row.level}</strong></td>
+                        <td>${row.xp.toLocaleString()} XP</td>
+                        <td>❤️ ${row.hp}</td>
+                        <td>⚔️ ${row.attack} | 🛡️ ${row.defense}</td>
+                        <td class="text-success">$${row.coins.toLocaleString()}</td>
+                        <td>🗡️ ${row.weapon}<br>🛡️ ${row.armor}</td>
+                        <td>🏰 Floor ${row.floor}</td>
+                    `;
+                    rpgBody.appendChild(tr);
+                });
+            } else {
+                rpgBody.innerHTML = `<tr><td colspan="9" class="loading">No active RPG player logs found.</td></tr>`;
+            }
+        } catch (err) {
+            console.error("Error loading RPG players:", err);
+            rpgBody.innerHTML = `<tr><td colspan="9" class="loading text-danger">Failed to fetch RPG statistics.</td></tr>`;
+        }
+    }
+
+    // ==========================================
+    // 🎉 ACTIVE FEATURES & GIVEAWAYS
+    // ==========================================
+    async function fetchFeatures() {
+        const giveawaysBody = document.getElementById("giveaways-table-body");
+        const tagsBody = document.getElementById("tags-table-body");
+        const respondersBody = document.getElementById("responders-table-body");
+
+        try {
+            const res = await fetch("/api/features/active");
+            const data = await res.json();
+
+            // Populate Giveaways
+            giveawaysBody.innerHTML = "";
+            if (data.giveaways && data.giveaways.length > 0) {
+                data.giveaways.forEach(row => {
+                    const tr = document.createElement("tr");
+                    const dateFmt = new Date(row.end_time * 1000).toLocaleString();
+                    const statusText = row.is_active ? '<span class="badge music-badge">Active</span>' : '<span class="badge">Ended</span>';
+                    tr.innerHTML = `
+                        <td><strong>${row.prize}</strong></td>
+                        <td>🏆 ${row.winners} Winners</td>
+                        <td>${row.host}</td>
+                        <td><small>${dateFmt}</small></td>
+                        <td>${statusText}</td>
+                    `;
+                    giveawaysBody.appendChild(tr);
+                });
+            } else {
+                giveawaysBody.innerHTML = `<tr><td colspan="5" class="loading">No active giveaways scheduled.</td></tr>`;
+            }
+
+            // Populate Custom Tags
+            tagsBody.innerHTML = "";
+            if (data.custom_tags && data.custom_tags.length > 0) {
+                data.custom_tags.forEach(row => {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td><code>&${row.tag_name}</code></td>
+                        <td>${row.author}</td>
+                        <td>${row.uses.toLocaleString()}</td>
+                    `;
+                    tagsBody.appendChild(tr);
+                });
+            } else {
+                tagsBody.innerHTML = `<tr><td colspan="3" class="loading">No custom tags created yet.</td></tr>`;
+            }
+
+            // Populate Autoresponders
+            respondersBody.innerHTML = "";
+            if (data.autoresponders && data.autoresponders.length > 0) {
+                data.autoresponders.forEach(row => {
+                    const tr = document.createElement("tr");
+                    const matchType = row.is_exact ? "Exact Match" : "Substring Match";
+                    tr.innerHTML = `
+                        <td><code>${row.trigger}</code></td>
+                        <td><small>${row.response}</small></td>
+                        <td><span class="badge">${matchType}</span></td>
+                    `;
+                    respondersBody.appendChild(tr);
+                });
+            } else {
+                respondersBody.innerHTML = `<tr><td colspan="3" class="loading">No active autoresponders.</td></tr>`;
+            }
+
+        } catch (err) {
+            console.error("Error loading features:", err);
+            giveawaysBody.innerHTML = `<tr><td colspan="5" class="loading text-danger">Failed to retrieve giveaways.</td></tr>`;
+            tagsBody.innerHTML = `<tr><td colspan="3" class="loading text-danger">Failed to fetch custom tags.</td></tr>`;
+            respondersBody.innerHTML = `<tr><td colspan="3" class="loading text-danger">Failed to fetch responders.</td></tr>`;
+        }
+    }
 });

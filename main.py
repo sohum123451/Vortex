@@ -220,6 +220,134 @@ def control_music():
         
     return jsonify({"error": "Invalid action"}), 400
 
+@app.route("/api/moderation")
+def get_moderation_data():
+    warnings = []
+    tempbans = []
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT id, guild_id, user_id, reason, timestamp FROM warnings ORDER BY id DESC LIMIT 50")
+            for row in cur.fetchall():
+                user_id = row[2]
+                user = bot.get_user(int(user_id)) if bot.is_ready() else None
+                username = user.name if user else f"User {user_id}"
+                warnings.append({
+                    "id": row[0],
+                    "guild_id": row[1],
+                    "user_id": user_id,
+                    "username": username,
+                    "reason": row[3],
+                    "timestamp": row[4]
+                })
+            cur.execute("SELECT user_id, guild_id, unban_time FROM tempbans")
+            for row in cur.fetchall():
+                user_id = row[0]
+                user = bot.get_user(int(user_id)) if bot.is_ready() else None
+                username = user.name if user else f"User {user_id}"
+                tempbans.append({
+                    "user_id": user_id,
+                    "username": username,
+                    "guild_id": row[1],
+                    "unban_time": row[2]
+                })
+    except Exception as e:
+        print(f"Error fetching moderation data: {e}")
+        
+    return jsonify({
+        "warnings": warnings,
+        "tempbans": tempbans
+    })
+
+@app.route("/api/rpg/players")
+def get_rpg_players():
+    players = []
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT user_id, class_type, level, xp, hp, max_hp, attack, defense, coins, equipped_weapon, equipped_armor, dungeon_floor 
+                FROM rpg_players 
+                ORDER BY level DESC, xp DESC 
+                LIMIT 15
+            """)
+            for row in cur.fetchall():
+                user_id = row[0]
+                user = bot.get_user(int(user_id)) if bot.is_ready() else None
+                username = user.name if user else f"User {user_id}"
+                players.append({
+                    "user_id": user_id,
+                    "username": username,
+                    "class": row[1],
+                    "level": row[2],
+                    "xp": row[3],
+                    "hp": f"{row[4]}/{row[5]}",
+                    "attack": row[6],
+                    "defense": row[7],
+                    "coins": row[8],
+                    "weapon": row[9],
+                    "armor": row[10],
+                    "floor": row[11]
+                })
+    except Exception as e:
+        print(f"Error fetching RPG players: {e}")
+        
+    return jsonify({"players": players})
+
+@app.route("/api/features/active")
+def get_active_features():
+    giveaways = []
+    custom_tags = []
+    autoresponders = []
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT message_id, channel_id, end_time, winners, prize, host_id FROM giveaways")
+            for row in cur.fetchall():
+                host_id = row[5]
+                host = bot.get_user(int(host_id)) if bot.is_ready() else None
+                hostname = host.name if host else f"User {host_id}"
+                
+                is_active = row[2] > datetime.now().timestamp()
+                giveaways.append({
+                    "message_id": row[0],
+                    "channel_id": row[1],
+                    "end_time": row[2],
+                    "winners": row[3],
+                    "prize": row[4],
+                    "host": hostname,
+                    "is_active": is_active
+                })
+                
+            cur.execute("SELECT guild_id, tag_name, author_id, uses FROM custom_tags")
+            for row in cur.fetchall():
+                author_id = row[2]
+                author = bot.get_user(int(author_id)) if bot.is_ready() else None
+                author_name = author.name if author else f"User {author_id}"
+                custom_tags.append({
+                    "guild_id": row[0],
+                    "tag_name": row[1],
+                    "author": author_name,
+                    "uses": row[3]
+                })
+                
+            cur.execute("SELECT guild_id, trigger_text, response_text, is_exact FROM autoresponders")
+            for row in cur.fetchall():
+                autoresponders.append({
+                    "guild_id": row[0],
+                    "trigger": row[1],
+                    "response": row[2],
+                    "is_exact": bool(row[3])
+                })
+    except Exception as e:
+        print(f"Error fetching active features: {e}")
+        
+    return jsonify({
+        "giveaways": giveaways,
+        "custom_tags": custom_tags,
+        "autoresponders": autoresponders
+    })
+
 def run():
     app.run(host="0.0.0.0", port=8080)
 

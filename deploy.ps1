@@ -28,6 +28,18 @@ if (Test-Path "cogs") {
     scp -i "$KeyPath" -r -o StrictHostKeyChecking=accept-new "cogs" "${User}@${HostIp}:${RemoteDir}/"
 }
 
+# Upload templates directory recursively
+if (Test-Path "templates") {
+    Write-Host "  -> Uploading templates/ view directory..." -ForegroundColor Gray
+    scp -i "$KeyPath" -r -o StrictHostKeyChecking=accept-new "templates" "${User}@${HostIp}:${RemoteDir}/"
+}
+
+# Upload static directory recursively
+if (Test-Path "static") {
+    Write-Host "  -> Uploading static/ asset directory..." -ForegroundColor Gray
+    scp -i "$KeyPath" -r -o StrictHostKeyChecking=accept-new "static" "${User}@${HostIp}:${RemoteDir}/"
+}
+
 Write-Host "[2/3] Restarting bot service with PM2 on AWS..." -ForegroundColor Cyan
 ssh -i "$KeyPath" "${User}@${HostIp}" "pm2 restart $ProcessName"
 

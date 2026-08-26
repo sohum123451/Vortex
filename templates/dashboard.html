@@ -37,6 +37,18 @@
                     <i class="fa-solid fa-music"></i>
                     <span>Music Player</span>
                 </a>
+                <a href="#moderation" class="nav-link" data-tab="moderation">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Moderation</span>
+                </a>
+                <a href="#rpg" class="nav-link" data-tab="rpg">
+                    <i class="fa-solid fa-gamepad"></i>
+                    <span>RPG & Custom</span>
+                </a>
+                <a href="#features" class="nav-link" data-tab="features">
+                    <i class="fa-solid fa-gift"></i>
+                    <span>Giveaways & Ads</span>
+                </a>
                 <a href="#leaderboards" class="nav-link" data-tab="leaderboards">
                     <i class="fa-solid fa-trophy"></i>
                     <span>Leaderboards</span>
@@ -333,6 +345,192 @@
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 🛡️ TAB 5: MODERATION -->
+            <section id="tab-moderation" class="tab-pane">
+                <div class="section-header">
+                    <h2>Moderation Portal</h2>
+                    <p>Track active warnings and temporary bans enforced across connected servers.</p>
+                </div>
+
+                <div class="moderation-layout">
+                    <!-- Warnings Panel -->
+                    <div class="data-box moderation-logs">
+                        <div class="moderation-box-header">
+                            <h3>Recent Warnings</h3>
+                            <div class="search-field-wrapper">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="warning-search-input" placeholder="Search by User ID...">
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>User ID</th>
+                                        <th>Username</th>
+                                        <th>Reason</th>
+                                        <th>Timestamp</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="warnings-table-body">
+                                    <tr><td colspan="5" class="loading">Loading warnings logs...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tempbans Panel -->
+                    <div class="data-box moderation-bans">
+                        <h3>Active Temporary Bans</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>User ID</th>
+                                        <th>Username</th>
+                                        <th>Guild ID</th>
+                                        <th>Unban Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tempbans-table-body">
+                                    <tr><td colspan="4" class="loading">Loading active tempbans...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ⚔️ TAB 6: RPG & CUSTOM CMDS -->
+            <section id="tab-rpg" class="tab-pane">
+                <div class="section-header">
+                    <h2>RPG Profiles & Autoresponders</h2>
+                    <p>Track player leveling in Vortex RPG and manage custom tag configurations.</p>
+                </div>
+
+                <div class="rpg-layout">
+                    <!-- RPG Profiles -->
+                    <div class="data-box rpg-profiles">
+                        <h3>Active RPG Adventurers</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Class</th>
+                                        <th>Lvl</th>
+                                        <th>XP</th>
+                                        <th>HP</th>
+                                        <th>Stats</th>
+                                        <th>Coins</th>
+                                        <th>Equipment</th>
+                                        <th>Floor</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rpg-table-body">
+                                    <tr><td colspan="9" class="loading">Loading adventure profiles...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Custom Autoresponders & Tags -->
+                    <div class="rpg-sub-layout">
+                        <div class="data-box custom-tags-box">
+                            <h3>Custom Tags List</h3>
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Tag Trigger</th>
+                                            <th>Author</th>
+                                            <th>Uses</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tags-table-body">
+                                        <tr><td colspan="3" class="loading">Loading custom tags...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="data-box autoresponders-box">
+                            <h3>Autoresponder Rules</h3>
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Trigger Pattern</th>
+                                            <th>Response Content</th>
+                                            <th>Match</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="responders-table-body">
+                                        <tr><td colspan="3" class="loading">Loading autoresponders...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 🎉 TAB 7: GIVEAWAYS & TICKETS -->
+            <section id="tab-features" class="tab-pane">
+                <div class="section-header">
+                    <h2>Giveaways & Active Contests</h2>
+                    <p>Monitor active community giveaways and open support queues.</p>
+                </div>
+
+                <div class="features-layout">
+                    <!-- Active Giveaways -->
+                    <div class="data-box giveaways-box">
+                        <h3>Giveaway Events</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Prize</th>
+                                        <th>Winners</th>
+                                        <th>Host</th>
+                                        <th>End Time</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="giveaways-table-body">
+                                    <tr><td colspan="5" class="loading">Loading giveaways...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Active Reminders / General info -->
+                    <div class="data-box help-features-box">
+                        <h3>Vortex Modules Configuration</h3>
+                        <p>The dashboard connects in real-time to the SQLite local database to display updates. Modifying these configurations can be done in Discord using command cogs.</p>
+                        <div class="config-modules-grid">
+                            <div class="module-card-status">
+                                <span class="dot active"></span>
+                                <span class="name">AI suite (Gemini)</span>
+                            </div>
+                            <div class="module-card-status">
+                                <span class="dot active"></span>
+                                <span class="name">Web Radio Streamer</span>
+                            </div>
+                            <div class="module-card-status">
+                                <span class="dot active"></span>
+                                <span class="name">Economy shop</span>
+                            </div>
+                            <div class="module-card-status">
+                                <span class="dot active"></span>
+                                <span class="name">RPG Floor Dungeon</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
