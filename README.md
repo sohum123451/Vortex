@@ -2,6 +2,8 @@
 
 Vortex is a powerful, fully-featured, modular Discord bot built with `discord.py` (v2.x). It features a robust architecture with specialized cogs covering advanced audio/music playback, AI chat, moderation, economy, ticket support, leveling, games, and server management.
 
+🔗 **Live Web Dashboard:** [vortex-bot-mmha.onrender.com](https://vortex-bot-mmha.onrender.com)
+
 ---
 
 ## 🌟 Key Features
