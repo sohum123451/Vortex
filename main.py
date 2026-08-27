@@ -13,10 +13,12 @@ if sys.platform == "win32":
     except Exception:
         pass
 
+import requests
+from urllib.parse import quote
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, redirect, session
 from utils import DB_FILE, MAIN_COLOR, ERROR_COLOR
 
 load_dotenv()
@@ -25,10 +27,139 @@ load_dotenv()
 # 🌐 FLASK KEEP ALIVE SERVER
 # ==========================================
 app = Flask("", static_folder="static", template_folder="templates")
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "vortex-secret-super-key-19283")
+
+DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "1464522902379561100")
+DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET", "")
+
+def is_authorized(guild_id):
+    if "user" not in session:
+        return False
+    user_guilds = session.get("guilds", [])
+    return any(g["id"] == str(guild_id) for g in user_guilds)
 
 @app.route("/")
 def home():
-    return render_template("dashboard.html")
+    if "user" in session:
+        return redirect("/selector")
+    return render_template("index.html")
+
+@app.route("/login")
+def login():
+    redirect_uri = f"{request.scheme}://{request.host}/callback"
+    scope = "identify guilds"
+    discord_login_url = f"https://discord.com/api/oauth2/authorize?client_id={DISCORD_CLIENT_ID}&redirect_uri={quote(redirect_uri)}&response_type=code&scope={quote(scope)}"
+    return redirect(discord_login_url)
+
+@app.route("/callback")
+def callback():
+    code = request.args.get("code")
+    if not code:
+        return "Authentication code missing.", 400
+        
+    redirect_uri = f"{request.scheme}://{request.host}/callback"
+    
+    # Exchange code for token
+    data = {
+        'client_id': DISCORD_CLIENT_ID,
+        'client_secret': DISCORD_CLIENT_SECRET,
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': redirect_uri
+    }
+    headers = {
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+    
+    r = requests.post("https://discord.com/api/oauth2/token", data=data, headers=headers)
+    if r.status_code != 200:
+        return f"Failed to retrieve access token: {r.text}", 400
+        
+    token_json = r.json()
+    access_token = token_json.get("access_token")
+    
+    # Fetch user details
+    user_headers = {
+        'Authorization': f'Bearer {access_token}'
+    }
+    user_r = requests.get("https://discord.com/api/users/@me", headers=user_headers)
+    if user_r.status_code != 200:
+        return "Failed to fetch user details.", 400
+    user_data = user_r.json()
+    
+    # Fetch user's guilds
+    guilds_r = requests.get("https://discord.com/api/users/@me/guilds", headers=user_headers)
+    if guilds_r.status_code != 200:
+        return "Failed to fetch user guilds list.", 400
+    guilds_data = guilds_r.json()
+    
+    admin_guilds = []
+    for g in guilds_data:
+        perms = int(g.get("permissions", 0))
+        if (perms & 0x8) == 0x8 or (perms & 0x20) == 0x20:
+            admin_guilds.append({
+                "id": g.get("id"),
+                "name": g.get("name"),
+                "icon": g.get("icon"),
+                "is_owner": g.get("owner", False)
+            })
+            
+    session["user"] = {
+        "id": user_data.get("id"),
+        "username": user_data.get("username"),
+        "avatar": user_data.get("avatar")
+    }
+    session["guilds"] = admin_guilds
+    
+    return redirect("/selector")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
+
+@app.route("/selector")
+def selector():
+    if "user" not in session:
+        return redirect("/login")
+        
+    user_guilds = session.get("guilds", [])
+    bot_guilds = [str(g.id) for g in bot.guilds] if bot.is_ready() else []
+    
+    guild_list = []
+    for g in user_guilds:
+        guild_id = g["id"]
+        has_bot = guild_id in bot_guilds
+        invite_url = f"https://discord.com/api/oauth2/authorize?client_id={DISCORD_CLIENT_ID}&permissions=8&scope=bot%20applications.commands&guild_id={guild_id}&disable_guild_select=true"
+        
+        guild_list.append({
+            "id": guild_id,
+            "name": g["name"],
+            "icon": g["icon"],
+            "has_bot": has_bot,
+            "invite_url": invite_url
+        })
+        
+    return render_template("selector.html", user=session["user"], guilds=guild_list)
+
+@app.route("/dashboard")
+def dashboard_view():
+    if "user" not in session:
+        return redirect("/login")
+        
+    guild_id = request.args.get("guild_id")
+    if not guild_id:
+        return redirect("/selector")
+        
+    if not is_authorized(guild_id):
+        return "Unauthorized: You do not manage this server.", 403
+        
+    guild = bot.get_guild(int(guild_id)) if bot.is_ready() else None
+    if not guild:
+        invite_url = f"https://discord.com/api/oauth2/authorize?client_id={DISCORD_CLIENT_ID}&permissions=8&scope=bot%20applications.commands&guild_id={guild_id}&disable_guild_select=true"
+        return redirect(invite_url)
+        
+    return render_template("dashboard.html", user=session["user"], guild=guild)
 
 @app.route("/api/stats")
 def get_stats():
@@ -73,15 +204,31 @@ def get_stats():
 
 @app.route("/api/leaderboards")
 def get_leaderboards():
+    guild_id = request.args.get("guild_id")
+    if not guild_id or not is_authorized(guild_id):
+        return jsonify({"error": "Unauthorized"}), 403
+        
+    guild = bot.get_guild(int(guild_id)) if bot.is_ready() else None
+    if not guild:
+        return jsonify({"error": "Guild not found"}), 404
+        
     economy_leaderboard = []
     levels_leaderboard = []
     try:
         with sqlite3.connect(DB_FILE) as conn:
             cur = conn.cursor()
-            cur.execute("SELECT user_id, balance, bank FROM economy ORDER BY (balance + bank) DESC LIMIT 10")
-            for row in cur.fetchall():
+            
+            # Economy
+            cur.execute("SELECT user_id, balance, bank FROM economy")
+            all_eco = cur.fetchall()
+            
+            guild_member_ids = {str(m.id) for m in guild.members}
+            eco_filtered = [row for row in all_eco if row[0] in guild_member_ids]
+            eco_filtered.sort(key=lambda r: r[1] + r[2], reverse=True)
+            
+            for row in eco_filtered[:10]:
                 user_id = row[0]
-                user = bot.get_user(int(user_id)) if bot.is_ready() else None
+                user = guild.get_member(int(user_id))
                 username = user.name if user else f"User {user_id}"
                 economy_leaderboard.append({
                     "username": username,
@@ -90,10 +237,11 @@ def get_leaderboards():
                     "total": row[1] + row[2]
                 })
                 
-            cur.execute("SELECT user_id, level, xp FROM levels ORDER BY xp DESC LIMIT 10")
+            # Levels
+            cur.execute("SELECT user_id, level, xp FROM levels WHERE guild_id = ? ORDER BY xp DESC LIMIT 10", (guild_id,))
             for row in cur.fetchall():
                 user_id = row[0]
-                user = bot.get_user(int(user_id)) if bot.is_ready() else None
+                user = guild.get_member(int(user_id))
                 username = user.name if user else f"User {user_id}"
                 levels_leaderboard.append({
                     "username": username,
@@ -111,50 +259,57 @@ def get_leaderboards():
 @app.route("/api/music/state")
 def get_music_state():
     if not bot.is_ready():
-        return jsonify({"guilds": []})
+        return jsonify({"guild_id": None, "active": False})
+        
+    guild_id = request.args.get("guild_id")
+    if not guild_id or not is_authorized(guild_id):
+        return jsonify({"error": "Unauthorized"}), 403
         
     music_cog = bot.get_cog("Music")
     if not music_cog:
-        return jsonify({"guilds": []})
+        return jsonify({"error": "Music cog not loaded"}), 500
         
-    result = []
-    for guild_id, state in music_cog.states.items():
-        guild = bot.get_guild(guild_id)
-        if not guild:
-            continue
-            
-        current_track = None
-        if state.current:
-            current_track = {
-                "title": state.current.title,
-                "url": state.current.webpage_url,
-                "uploader": state.current.uploader,
-                "duration": state.current.duration
-            }
-            
-        queue = []
-        for s in state.queue:
-            queue.append({
-                "title": s.title,
-                "duration": s.duration
-            })
-            
-        vc = guild.voice_client
-        is_playing = vc.is_playing() if vc else False
-        is_paused = vc.is_paused() if vc else False
+    try:
+        g_id = int(guild_id)
+    except ValueError:
+        return jsonify({"error": "Invalid guild_id"}), 400
         
-        result.append({
-            "guild_id": str(guild_id),
-            "guild_name": guild.name,
-            "active": vc is not None,
-            "is_playing": is_playing,
-            "is_paused": is_paused,
-            "volume": int(state.volume * 100),
-            "current": current_track,
-            "queue": queue
+    guild = bot.get_guild(g_id)
+    if not guild:
+        return jsonify({"error": "Guild not found"}), 404
+        
+    state = music_cog.get_state(g_id)
+    vc = guild.voice_client
+    
+    current_track = None
+    if state.current:
+        current_track = {
+            "title": state.current.title,
+            "url": state.current.webpage_url,
+            "uploader": state.current.uploader,
+            "duration": state.current.duration
+        }
+        
+    queue = []
+    for s in state.queue:
+        queue.append({
+            "title": s.title,
+            "duration": s.duration
         })
         
-    return jsonify({"guilds": result})
+    is_playing = vc.is_playing() if vc else False
+    is_paused = vc.is_paused() if vc else False
+    
+    return jsonify({
+        "guild_id": guild_id,
+        "guild_name": guild.name,
+        "active": vc is not None,
+        "is_playing": is_playing,
+        "is_paused": is_paused,
+        "volume": int(state.volume * 100),
+        "current": current_track,
+        "queue": queue
+    })
 
 @app.route("/api/music/control", methods=["POST"])
 def control_music():
@@ -167,6 +322,9 @@ def control_music():
     
     if not guild_id_str or not action:
         return jsonify({"error": "Missing guild_id or action"}), 400
+        
+    if not is_authorized(guild_id_str):
+        return jsonify({"error": "Unauthorized"}), 403
         
     try:
         guild_id = int(guild_id_str)
@@ -222,12 +380,16 @@ def control_music():
 
 @app.route("/api/moderation")
 def get_moderation_data():
+    guild_id = request.args.get("guild_id")
+    if not guild_id or not is_authorized(guild_id):
+        return jsonify({"error": "Unauthorized"}), 403
+        
     warnings = []
     tempbans = []
     try:
         with sqlite3.connect(DB_FILE) as conn:
             cur = conn.cursor()
-            cur.execute("SELECT id, guild_id, user_id, reason, timestamp FROM warnings ORDER BY id DESC LIMIT 50")
+            cur.execute("SELECT id, guild_id, user_id, reason, timestamp FROM warnings WHERE guild_id = ? ORDER BY id DESC LIMIT 50", (guild_id,))
             for row in cur.fetchall():
                 user_id = row[2]
                 user = bot.get_user(int(user_id)) if bot.is_ready() else None
@@ -240,7 +402,7 @@ def get_moderation_data():
                     "reason": row[3],
                     "timestamp": row[4]
                 })
-            cur.execute("SELECT user_id, guild_id, unban_time FROM tempbans")
+            cur.execute("SELECT user_id, guild_id, unban_time FROM tempbans WHERE guild_id = ?", (guild_id,))
             for row in cur.fetchall():
                 user_id = row[0]
                 user = bot.get_user(int(user_id)) if bot.is_ready() else None
@@ -261,6 +423,14 @@ def get_moderation_data():
 
 @app.route("/api/rpg/players")
 def get_rpg_players():
+    guild_id = request.args.get("guild_id")
+    if not guild_id or not is_authorized(guild_id):
+        return jsonify({"error": "Unauthorized"}), 403
+        
+    guild = bot.get_guild(int(guild_id)) if bot.is_ready() else None
+    if not guild:
+        return jsonify({"error": "Guild not found"}), 404
+        
     players = []
     try:
         with sqlite3.connect(DB_FILE) as conn:
@@ -268,12 +438,16 @@ def get_rpg_players():
             cur.execute("""
                 SELECT user_id, class_type, level, xp, hp, max_hp, attack, defense, coins, equipped_weapon, equipped_armor, dungeon_floor 
                 FROM rpg_players 
-                ORDER BY level DESC, xp DESC 
-                LIMIT 15
+                ORDER BY level DESC, xp DESC
             """)
-            for row in cur.fetchall():
+            all_players = cur.fetchall()
+            
+            guild_member_ids = {str(m.id) for m in guild.members}
+            filtered_players = [row for row in all_players if row[0] in guild_member_ids]
+            
+            for row in filtered_players[:15]:
                 user_id = row[0]
-                user = bot.get_user(int(user_id)) if bot.is_ready() else None
+                user = guild.get_member(int(user_id))
                 username = user.name if user else f"User {user_id}"
                 players.append({
                     "user_id": user_id,
@@ -296,33 +470,47 @@ def get_rpg_players():
 
 @app.route("/api/features/active")
 def get_active_features():
+    guild_id = request.args.get("guild_id")
+    if not guild_id or not is_authorized(guild_id):
+        return jsonify({"error": "Unauthorized"}), 403
+        
+    guild = bot.get_guild(int(guild_id)) if bot.is_ready() else None
+    if not guild:
+        return jsonify({"error": "Guild not found"}), 404
+        
     giveaways = []
     custom_tags = []
     autoresponders = []
     try:
         with sqlite3.connect(DB_FILE) as conn:
             cur = conn.cursor()
+            
+            # Giveaways
+            guild_channel_ids = {str(c.id) for c in guild.text_channels}
             cur.execute("SELECT message_id, channel_id, end_time, winners, prize, host_id FROM giveaways")
             for row in cur.fetchall():
-                host_id = row[5]
-                host = bot.get_user(int(host_id)) if bot.is_ready() else None
-                hostname = host.name if host else f"User {host_id}"
-                
-                is_active = row[2] > datetime.now().timestamp()
-                giveaways.append({
-                    "message_id": row[0],
-                    "channel_id": row[1],
-                    "end_time": row[2],
-                    "winners": row[3],
-                    "prize": row[4],
-                    "host": hostname,
-                    "is_active": is_active
-                })
-                
-            cur.execute("SELECT guild_id, tag_name, author_id, uses FROM custom_tags")
+                ch_id = row[1]
+                if ch_id in guild_channel_ids:
+                    host_id = row[5]
+                    host = guild.get_member(int(host_id))
+                    hostname = host.name if host else f"User {host_id}"
+                    
+                    is_active = row[2] > datetime.now().timestamp()
+                    giveaways.append({
+                        "message_id": row[0],
+                        "channel_id": ch_id,
+                        "end_time": row[2],
+                        "winners": row[3],
+                        "prize": row[4],
+                        "host": hostname,
+                        "is_active": is_active
+                    })
+                    
+            # Custom tags
+            cur.execute("SELECT guild_id, tag_name, author_id, uses FROM custom_tags WHERE guild_id = ?", (guild_id,))
             for row in cur.fetchall():
                 author_id = row[2]
-                author = bot.get_user(int(author_id)) if bot.is_ready() else None
+                author = guild.get_member(int(author_id))
                 author_name = author.name if author else f"User {author_id}"
                 custom_tags.append({
                     "guild_id": row[0],
@@ -331,7 +519,8 @@ def get_active_features():
                     "uses": row[3]
                 })
                 
-            cur.execute("SELECT guild_id, trigger_text, response_text, is_exact FROM autoresponders")
+            # Autoresponders
+            cur.execute("SELECT guild_id, trigger_text, response_text, is_exact FROM autoresponders WHERE guild_id = ?", (guild_id,))
             for row in cur.fetchall():
                 autoresponders.append({
                     "guild_id": row[0],

@@ -966,3 +966,8 @@ td.loading {
     font-size: 0.85rem;
     font-weight: 600;
 }
+
+/* Back to Selector Button Hover State */
+.back-selector-btn:hover {
+    color: #fff !important;
+}

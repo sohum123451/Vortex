@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vortex - Select Server</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <style>
+        body {
+            min-height: 100vh;
+            background: radial-gradient(circle at top right, rgba(142, 68, 173, 0.1), transparent 60%),
+                        #0b0816;
+            margin: 0;
+            padding: 40px 20px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #f5f6fa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .selector-header {
+            text-align: center;
+            margin-bottom: 40px;
+            max-width: 600px;
+        }
+        .selector-header h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+        .selector-header p {
+            color: #b2bec3;
+            font-size: 1rem;
+        }
+        .user-profile-bar {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 12px 24px;
+            margin-bottom: 40px;
+            backdrop-filter: blur(10px);
+        }
+        .user-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid #a29bfe;
+        }
+        .user-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+        .logout-link {
+            color: #ff7675;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: opacity 0.2s;
+            margin-left: 12px;
+        }
+        .logout-link:hover {
+            opacity: 0.8;
+        }
+        .guilds-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 24px;
+            max-width: 960px;
+            width: 100%;
+        }
+        .guild-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 20px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+        }
+        .guild-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(162, 155, 254, 0.3);
+        }
+        .guild-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin-bottom: 18px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            object-fit: cover;
+            border: 3px solid rgba(255, 255, 255, 0.05);
+        }
+        .guild-icon-fallback {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin-bottom: 18px;
+            background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            border: 3px solid rgba(255, 255, 255, 0.05);
+        }
+        .guild-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .action-btn {
+            width: 100%;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-neon);
+        }
+        .btn-configure {
+            background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+            color: #fff;
+        }
+        .btn-configure:hover {
+            transform: scale(1.02);
+            filter: brightness(1.1);
+        }
+        .btn-invite {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #b2bec3;
+        }
+        .btn-invite:hover {
+            background: rgba(88, 101, 242, 0.1);
+            color: #5865F2;
+            border-color: #5865F2;
+        }
+    </style>
+</head>
+<body>
+    <div class="user-profile-bar">
+        {% if user.avatar %}
+            <img src="https://cdn.discordapp.com/avatars/{{ user.id }}/{{ user.avatar }}.png" class="user-avatar" alt="Avatar">
+        {% else %}
+            <div class="user-avatar" style="background:#5865F2; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:bold;">{{ user.username[0]|upper }}</div>
+        {% endif %}
+        <span class="user-name">Welcome, {{ user.username }}</span>
+        <a href="/logout" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+    </div>
+
+    <div class="selector-header">
+        <h1>Select a Server</h1>
+        <p>Please select a Discord server you manage below to configure custom cogs, view leaderboards, and stream web radios.</p>
+    </div>
+
+    <div class="guilds-grid">
+        {% for guild in guilds %}
+            <div class="guild-card">
+                {% if guild.icon %}
+                    <img src="https://cdn.discordapp.com/icons/{{ guild.id }}/{{ guild.icon }}.png" class="guild-icon" alt="{{ guild.name }}">
+                {% else %}
+                    <div class="guild-icon-fallback">{{ guild.name[0]|upper }}</div>
+                {% endif %}
+                <div class="guild-name">{{ guild.name }}</div>
+                
+                {% if guild.has_bot %}
+                    <a href="/dashboard?guild_id={{ guild.id }}" class="action-btn btn-configure">Configure Server</a>
+                {% else %}
+                    <a href="{{ guild.invite_url }}" target="_blank" class="action-btn btn-invite"><i class="fa-solid fa-plus"></i> Invite Bot</a>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

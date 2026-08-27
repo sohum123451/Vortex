@@ -87,11 +87,12 @@ document.addEventListener("DOMContentLoaded", () => {
     // 🏆 LEADERBOARD POPULATION
     // ==========================================
     async function fetchLeaderboards() {
+        if (!selectedGuildId) return;
         const levelsBody = document.getElementById("levels-leaderboard-body");
         const economyBody = document.getElementById("economy-leaderboard-body");
 
         try {
-            const res = await fetch("/api/leaderboards");
+            const res = await fetch(`/api/leaderboards?guild_id=${selectedGuildId}`);
             const data = await res.json();
 
             // Populate Levels
@@ -151,40 +152,62 @@ document.addEventListener("DOMContentLoaded", () => {
     const volumeDisplay = document.getElementById("volume-val-display");
     const queueList = document.getElementById("music-queue-list");
 
+    let localIsPlaying = false;
+
     async function fetchMusicState() {
+        if (!selectedGuildId) return;
         try {
-            const res = await fetch("/api/music/state");
+            const res = await fetch(`/api/music/state?guild_id=${selectedGuildId}`);
             const data = await res.json();
-            musicStateData = data.guilds || [];
 
-            // Update Guild Dropdown options
-            const currentSelection = guildSelect.value;
-            guildSelect.innerHTML = "";
-
-            if (musicStateData.length === 0) {
-                guildSelect.innerHTML = `<option value="">No Active Guild Connections</option>`;
-                selectedGuildId = null;
+            if (data.error || !data.active) {
                 showEmptyPlayer();
                 return;
             }
 
-            musicStateData.forEach(g => {
-                const opt = document.createElement("option");
-                opt.value = g.guild_id;
-                opt.textContent = `${g.guild_name} (${g.active ? 'Connected' : 'Offline'})`;
-                guildSelect.appendChild(opt);
-            });
+            // Show player, hide empty
+            playerEmptyView.classList.add("hidden");
+            playerActiveView.classList.remove("hidden");
 
-            // Keep selected guild active if it still exists
-            if (currentSelection && musicStateData.some(g => g.guild_id === currentSelection)) {
-                guildSelect.value = currentSelection;
-                selectedGuildId = currentSelection;
+            // Set Title/Uploader
+            if (data.current) {
+                trackTitle.textContent = data.current.title;
+                trackArtist.textContent = data.current.uploader;
+                localIsPlaying = data.is_playing;
             } else {
-                selectedGuildId = musicStateData[0].guild_id;
-                guildSelect.value = selectedGuildId;
+                trackTitle.textContent = "No Track Playing";
+                trackArtist.textContent = "Vortex Radio";
+                localIsPlaying = false;
             }
 
-            updatePlayerConsole();
+            // Toggle Play/Pause Button Icon
+            if (data.is_playing) {
+                btnPauseResume.innerHTML = `<i class="fa-solid fa-pause"></i>`;
+            } else {
+                btnPauseResume.innerHTML = `<i class="fa-solid fa-play"></i>`;
+            }
+
+            // Update Volume slider (only if user is not actively sliding it)
+            if (document.activeElement !== volumeSlider) {
+                volumeSlider.value = data.volume;
+                volumeDisplay.textContent = `${data.volume}%`;
+            }
+
+            // Update Queue
+            queueList.innerHTML = "";
+            if (data.queue && data.queue.length > 0) {
+                data.queue.forEach((song, idx) => {
+                    const li = document.createElement("li");
+                    const durationText = song.duration ? `${Math.floor(song.duration / 60)}:${(song.duration % 60).toString().padStart(2, '0')}` : "Stream";
+                    li.innerHTML = `
+                        <span class="song-title"><strong>${idx + 1}.</strong> ${song.title}</span>
+                        <span class="song-dur">${durationText}</span>
+                    `;
+                    queueList.appendChild(li);
+                });
+            } else {
+                queueList.innerHTML = `<li class="empty-queue">Queue is empty</li>`;
+            }
         } catch (err) {
             console.error("Error fetching music state:", err);
             showEmptyPlayer();
@@ -196,59 +219,6 @@ document.addEventListener("DOMContentLoaded", () => {
         playerEmptyView.classList.remove("hidden");
         queueList.innerHTML = `<li class="empty-queue">Queue is empty</li>`;
     }
-
-    function updatePlayerConsole() {
-        if (!selectedGuildId) return;
-
-        const currentGuildState = musicStateData.find(g => g.guild_id === selectedGuildId);
-        if (!currentGuildState || !currentGuildState.active || !currentGuildState.current) {
-            showEmptyPlayer();
-            return;
-        }
-
-        // Show player, hide empty
-        playerEmptyView.classList.add("hidden");
-        playerActiveView.classList.remove("hidden");
-
-        // Set Title/Uploader
-        trackTitle.textContent = currentGuildState.current.title;
-        trackArtist.textContent = currentGuildState.current.uploader;
-
-        // Toggle Play/Pause Button Icon
-        if (currentGuildState.is_playing) {
-            btnPauseResume.innerHTML = `<i class="fa-solid fa-pause"></i>`;
-        } else {
-            btnPauseResume.innerHTML = `<i class="fa-solid fa-play"></i>`;
-        }
-
-        // Update Volume slider (only if user is not actively sliding it)
-        if (document.activeElement !== volumeSlider) {
-            volumeSlider.value = currentGuildState.volume;
-            volumeDisplay.textContent = `${currentGuildState.volume}%`;
-        }
-
-        // Update Queue
-        queueList.innerHTML = "";
-        if (currentGuildState.queue && currentGuildState.queue.length > 0) {
-            currentGuildState.queue.forEach((song, idx) => {
-                const li = document.createElement("li");
-                const durationText = song.duration ? `${Math.floor(song.duration / 60)}:${(song.duration % 60).toString().padStart(2, '0')}` : "Stream";
-                li.innerHTML = `
-                    <span class="song-title"><strong>${idx + 1}.</strong> ${song.title}</span>
-                    <span class="song-dur">${durationText}</span>
-                `;
-                queueList.appendChild(li);
-            });
-        } else {
-            queueList.innerHTML = `<li class="empty-queue">Queue is empty</li>`;
-        }
-    }
-
-    // Dropdown change listener
-    guildSelect.addEventListener("change", () => {
-        selectedGuildId = guildSelect.value;
-        updatePlayerConsole();
-    });
 
     // Start polling music state
     fetchMusicState();
@@ -283,12 +253,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Click Toggles
     btnPauseResume.addEventListener("click", () => {
-        if (!selectedGuildId) return;
-        const currentGuildState = musicStateData.find(g => g.guild_id === selectedGuildId);
-        if (currentGuildState) {
-            const action = currentGuildState.is_playing ? "pause" : "resume";
-            sendControlAction(action);
-        }
+        const action = localIsPlaying ? "pause" : "resume";
+        sendControlAction(action);
     });
 
     btnSkip.addEventListener("click", () => {
@@ -330,11 +296,12 @@ document.addEventListener("DOMContentLoaded", () => {
     // 🛡️ MODERATION DATA
     // ==========================================
     async function fetchModeration() {
+        if (!selectedGuildId) return;
         const warningsBody = document.getElementById("warnings-table-body");
         const tempbansBody = document.getElementById("tempbans-table-body");
 
         try {
-            const res = await fetch("/api/moderation");
+            const res = await fetch(`/api/moderation?guild_id=${selectedGuildId}`);
             const data = await res.json();
 
             // Populate Warnings
@@ -400,10 +367,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // ⚔️ RPG ADVENTURERS
     // ==========================================
     async function fetchRPG() {
+        if (!selectedGuildId) return;
         const rpgBody = document.getElementById("rpg-table-body");
 
         try {
-            const res = await fetch("/api/rpg/players");
+            const res = await fetch(`/api/rpg/players?guild_id=${selectedGuildId}`);
             const data = await res.json();
 
             rpgBody.innerHTML = "";
@@ -436,12 +404,13 @@ document.addEventListener("DOMContentLoaded", () => {
     // 🎉 ACTIVE FEATURES & GIVEAWAYS
     // ==========================================
     async function fetchFeatures() {
+        if (!selectedGuildId) return;
         const giveawaysBody = document.getElementById("giveaways-table-body");
         const tagsBody = document.getElementById("tags-table-body");
         const respondersBody = document.getElementById("responders-table-body");
 
         try {
-            const res = await fetch("/api/features/active");
+            const res = await fetch(`/api/features/active?guild_id=${selectedGuildId}`);
             const data = await res.json();
 
             // Populate Giveaways

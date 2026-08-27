@@ -18,13 +18,18 @@
         <!-- 🧭 SIDEBAR -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <div class="brand">
+                <a href="/selector" class="back-selector-btn" style="color: var(--text-muted); text-decoration: none; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: color 0.2s;"><i class="fa-solid fa-chevron-left"></i> Change Server</a>
+                <div class="brand" style="margin-top: 15px;">
                     <span class="logo-icon"><i class="fa-solid fa-bolt"></i></span>
                     <h1 class="logo-text">VORTEX</h1>
                 </div>
-                <div class="status-badge" id="bot-status-badge">
-                    <span class="pulse-dot"></span>
-                    <span class="status-label">Online</span>
+                <div class="guild-info-banner" style="margin-top: 10px; display: flex; align-items: center; gap: 10px; padding: 6px 12px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); width: 100%;">
+                    {% if guild.icon %}
+                        <img src="https://cdn.discordapp.com/icons/{{ guild.id }}/{{ guild.icon }}.png" style="width: 24px; height: 24px; border-radius: 50%;" alt="Guild Icon">
+                    {% else %}
+                        <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--color-primary); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; color: #fff;">{{ guild.name[0]|upper }}</div>
+                    {% endif %}
+                    <span style="font-size: 0.85rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;">{{ guild.name }}</span>
                 </div>
             </div>
             
@@ -60,13 +65,15 @@
             </nav>
 
             <div class="sidebar-footer">
-                <div class="user-profile">
-                    <div class="user-avatar">
-                        <i class="fa-solid fa-robot"></i>
-                    </div>
-                    <div class="user-details">
-                        <span class="username">Vortex v2.4</span>
-                        <span class="user-status">Host Status: Active</span>
+                <div class="user-profile" style="display: flex; align-items: center; gap: 12px; width: 100%;">
+                    {% if user.avatar %}
+                        <img src="https://cdn.discordapp.com/avatars/{{ user.id }}/{{ user.avatar }}.png" style="width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--color-primary);" alt="Avatar">
+                    {% else %}
+                        <div style="width: 38px; height: 38px; border-radius: 50%; background: #5865F2; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: bold; color: #fff;">{{ user.username[0]|upper }}</div>
+                    {% endif %}
+                    <div class="user-details" style="display: flex; flex-direction: column;">
+                        <span class="username" style="font-size: 0.85rem; font-weight: 700; color: #fff; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ user.username }}</span>
+                        <a href="/logout" style="font-size: 0.75rem; color: #ff7675; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
                     </div>
                 </div>
             </div>
@@ -161,9 +168,10 @@
                     <!-- Player Box -->
                     <div class="music-card player-card">
                         <div class="guild-selector-wrapper">
-                            <label for="music-guild-select">Active Connection:</label>
-                            <select id="music-guild-select" class="guild-dropdown">
-                                <option value="">No Active Guild Connections</option>
+                            <label>Active Server:</label>
+                            <span class="active-connection-name" style="font-weight: 700; color: var(--color-cyan);"><i class="fa-solid fa-server"></i> {{ guild.name }}</span>
+                            <select id="music-guild-select" class="guild-dropdown" style="display: none;">
+                                <option value="{{ guild.id }}" selected>{{ guild.name }}</option>
                             </select>
                         </div>
                         
