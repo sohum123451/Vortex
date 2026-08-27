@@ -8,3 +8,6 @@ __pycache__/
 venv/
 .agents/
 .gemini/
+
+# Ignore nested repositories
+Vortex/
