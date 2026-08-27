@@ -46,7 +46,8 @@ def home():
 
 @app.route("/login")
 def login():
-    redirect_uri = f"{request.scheme}://{request.host}/callback"
+    scheme = request.headers.get('X-Forwarded-Proto', request.scheme)
+    redirect_uri = f"{scheme}://{request.host}/callback"
     scope = "identify guilds"
     discord_login_url = f"https://discord.com/api/oauth2/authorize?client_id={DISCORD_CLIENT_ID}&redirect_uri={quote(redirect_uri)}&response_type=code&scope={quote(scope)}"
     return redirect(discord_login_url)
@@ -57,7 +58,8 @@ def callback():
     if not code:
         return "Authentication code missing.", 400
         
-    redirect_uri = f"{request.scheme}://{request.host}/callback"
+    scheme = request.headers.get('X-Forwarded-Proto', request.scheme)
+    redirect_uri = f"{scheme}://{request.host}/callback"
     
     # Exchange code for token
     data = {
