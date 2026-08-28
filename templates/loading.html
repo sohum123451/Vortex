@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="refresh" content="3">
-    <title>Vortex - Connecting...</title>
+    <title>Vortex — Connecting</title>
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,30 +19,27 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            background: radial-gradient(circle at top right, rgba(142, 68, 173, 0.1), transparent 60%),
-                        #0b0816;
+            background-color: #0d0f14;
             margin: 0;
-            padding: 20px;
+            padding: 24px;
             font-family: 'Plus Jakarta Sans', sans-serif;
-            color: #f5f6fa;
+            color: #f8fafc;
             text-align: center;
         }
         .loading-card {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 24px;
-            padding: 50px 30px;
-            max-width: 450px;
+            background: #141720;
+            border: 1px solid #202532;
+            border-radius: 20px;
+            padding: 44px 28px;
+            max-width: 440px;
             width: 100%;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         }
         .spinner {
-            font-size: 3.5rem;
-            color: var(--color-cyan);
-            margin-bottom: 24px;
-            animation: spin 1.5s linear infinite;
-            filter: drop-shadow(0 0 10px rgba(0, 210, 211, 0.3));
+            font-size: 2.8rem;
+            color: #5865f2;
+            margin-bottom: 20px;
+            animation: spin 1.2s linear infinite;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -50,22 +47,23 @@
         }
         h2 {
             font-family: 'Outfit', sans-serif;
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             font-weight: 700;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
+            color: #fff;
         }
         p {
-            color: #b2bec3;
-            font-size: 0.95rem;
-            line-height: 1.6;
+            color: #94a3b8;
+            font-size: 0.92rem;
+            line-height: 1.5;
         }
     </style>
 </head>
 <body>
     <div class="loading-card">
-        <div class="spinner"><i class="fa-solid fa-spinner"></i></div>
-        <h2>Bot is Connecting...</h2>
-        <p>Vortex is currently establishing a secure connection to the Discord Gateway. This page will automatically refresh in a few seconds.</p>
+        <div class="spinner"><i class="fa-solid fa-circle-notch"></i></div>
+        <h2>Connecting to Discord...</h2>
+        <p>Vortex is syncing gateway events and server state. This page will automatically refresh once ready.</p>
     </div>
 </body>
 </html>

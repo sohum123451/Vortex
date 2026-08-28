@@ -2,40 +2,71 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vortex Discord Bot - Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vortex — {{ guild.name }} Dashboard</title>
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Custom Style -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
 </head>
 <body>
+    <!-- 📱 MOBILE TOPBAR -->
+    <header class="mobile-topbar">
+        <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Open Navigation">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="mobile-brand">
+            <span class="logo-icon"><i class="fa-solid fa-bolt"></i></span>
+            <span>Vortex</span>
+        </div>
+        <div class="mobile-guild-badge">
+            {% if guild.icon %}
+                <img src="https://cdn.discordapp.com/icons/{{ guild.id }}/{{ guild.icon }}.png" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" alt="{{ guild.name }}">
+            {% else %}
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--color-primary); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; color: #fff;">{{ guild.name[0]|upper }}</div>
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- 📱 MOBILE BACKDROP OVERLAY -->
+    <div id="mobile-backdrop" class="mobile-backdrop"></div>
+
     <div class="dashboard-container">
-        <!-- 🧭 SIDEBAR -->
-        <aside class="sidebar">
+        <!-- 🧭 SIDEBAR DRAWER -->
+        <aside id="sidebar-drawer" class="sidebar">
             <div class="sidebar-header">
-                <a href="/selector" class="back-selector-btn" style="color: var(--text-muted); text-decoration: none; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: color 0.2s;"><i class="fa-solid fa-chevron-left"></i> Change Server</a>
-                <div class="brand" style="margin-top: 15px;">
-                    <span class="logo-icon"><i class="fa-solid fa-bolt"></i></span>
-                    <h1 class="logo-text">VORTEX</h1>
+                <a href="/selector" class="back-selector-btn">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Switch Server</span>
+                </a>
+                
+                <div class="brand">
+                    <div class="brand-title-wrap">
+                        <span class="logo-icon"><i class="fa-solid fa-bolt"></i></span>
+                        <span class="logo-text">Vortex</span>
+                    </div>
+                    <button id="close-drawer-btn" class="close-drawer-btn" aria-label="Close Navigation">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
                 </div>
-                <div class="guild-info-banner" style="margin-top: 10px; display: flex; align-items: center; gap: 10px; padding: 6px 12px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); width: 100%;">
+
+                <div class="guild-info-banner">
                     {% if guild.icon %}
-                        <img src="https://cdn.discordapp.com/icons/{{ guild.id }}/{{ guild.icon }}.png" style="width: 24px; height: 24px; border-radius: 50%;" alt="Guild Icon">
+                        <img src="https://cdn.discordapp.com/icons/{{ guild.id }}/{{ guild.icon }}.png" alt="{{ guild.name }}">
                     {% else %}
-                        <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--color-primary); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; color: #fff;">{{ guild.name[0]|upper }}</div>
+                        <div class="guild-icon-fallback">{{ guild.name[0]|upper }}</div>
                     {% endif %}
-                    <span style="font-size: 0.85rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;">{{ guild.name }}</span>
+                    <span class="guild-name-text">{{ guild.name }}</span>
                 </div>
             </div>
             
             <nav class="sidebar-nav">
                 <a href="#overview" class="nav-link active" data-tab="overview">
-                    <i class="fa-solid fa-chart-simple"></i>
+                    <i class="fa-solid fa-gauge"></i>
                     <span>Overview</span>
                 </a>
                 <a href="#music" class="nav-link" data-tab="music">
@@ -47,7 +78,7 @@
                     <span>Moderation</span>
                 </a>
                 <a href="#rpg" class="nav-link" data-tab="rpg">
-                    <i class="fa-solid fa-gamepad"></i>
+                    <i class="fa-solid fa-dice-d20"></i>
                     <span>RPG & Custom</span>
                 </a>
                 <a href="#features" class="nav-link" data-tab="features">
@@ -65,16 +96,18 @@
             </nav>
 
             <div class="sidebar-footer">
-                <div class="user-profile" style="display: flex; align-items: center; gap: 12px; width: 100%;">
-                    {% if user.avatar %}
-                        <img src="https://cdn.discordapp.com/avatars/{{ user.id }}/{{ user.avatar }}.png" style="width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--color-primary);" alt="Avatar">
-                    {% else %}
-                        <div style="width: 38px; height: 38px; border-radius: 50%; background: #5865F2; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: bold; color: #fff;">{{ user.username[0]|upper }}</div>
-                    {% endif %}
-                    <div class="user-details" style="display: flex; flex-direction: column;">
-                        <span class="username" style="font-size: 0.85rem; font-weight: 700; color: #fff; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ user.username }}</span>
-                        <a href="/logout" style="font-size: 0.75rem; color: #ff7675; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+                <div class="user-profile">
+                    <div class="user-profile-left">
+                        {% if user.avatar %}
+                            <img src="https://cdn.discordapp.com/avatars/{{ user.id }}/{{ user.avatar }}.png" class="user-avatar" alt="{{ user.username }}">
+                        {% else %}
+                            <div class="user-avatar-fallback">{{ user.username[0]|upper }}</div>
+                        {% endif %}
+                        <span class="user-name-text">{{ user.username }}</span>
                     </div>
+                    <a href="/logout" class="logout-icon-btn" title="Log Out">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    </a>
                 </div>
             </div>
         </aside>
@@ -84,37 +117,37 @@
             <!-- 📊 TAB 1: OVERVIEW -->
             <section id="tab-overview" class="tab-pane active">
                 <div class="section-header">
-                    <h2>System Overview</h2>
-                    <p>Live health statistics and database diagnostics for Vortex Bot.</p>
+                    <h2>Server Overview</h2>
+                    <p>Live health metrics and database status for {{ guild.name }}.</p>
                 </div>
                 
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-icon purple"><i class="fa-solid fa-server"></i></div>
+                        <div class="stat-icon blue"><i class="fa-solid fa-server"></i></div>
                         <div class="stat-details">
                             <span class="stat-value" id="stat-guilds">0</span>
-                            <span class="stat-label">Total Guilds</span>
+                            <span class="stat-label">Connected Servers</span>
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon blue"><i class="fa-solid fa-users"></i></div>
+                        <div class="stat-icon purple"><i class="fa-solid fa-users"></i></div>
                         <div class="stat-details">
                             <span class="stat-value" id="stat-users">0</span>
-                            <span class="stat-label">Total Users</span>
+                            <span class="stat-label">Active Users</span>
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon green"><i class="fa-solid fa-gauge-high"></i></div>
+                        <div class="stat-icon green"><i class="fa-solid fa-bolt"></i></div>
                         <div class="stat-details">
                             <span class="stat-value" id="stat-ping">0ms</span>
-                            <span class="stat-label">API Latency</span>
+                            <span class="stat-label">Gateway Ping</span>
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon orange"><i class="fa-solid fa-clock"></i></div>
+                        <div class="stat-icon orange"><i class="fa-regular fa-clock"></i></div>
                         <div class="stat-details">
                             <span class="stat-value" id="stat-uptime">0h 0m</span>
-                            <span class="stat-label">System Uptime</span>
+                            <span class="stat-label">Bot Uptime</span>
                         </div>
                     </div>
                 </div>
@@ -122,36 +155,36 @@
                 <div class="dashboard-rows-grid">
                     <!-- DB Stats Box -->
                     <div class="data-box database-diagnostics">
-                        <h3><i class="fa-solid fa-database"></i> Database Diagnostics</h3>
+                        <h3><i class="fa-solid fa-database"></i> Database Metrics</h3>
                         <div class="db-stats-list">
                             <div class="db-stat-item">
-                                <span class="label">Total Leveled Users</span>
+                                <span class="label">Leveled Server Members</span>
                                 <span class="val" id="db-level-users">0</span>
                             </div>
                             <div class="db-stat-item">
-                                <span class="label">Coins in Economy</span>
+                                <span class="label">Total Coins in Circulation</span>
                                 <span class="val" id="db-coins">0</span>
                             </div>
                             <div class="db-stat-item">
-                                <span class="label">Database Type</span>
+                                <span class="label">Database Engine</span>
                                 <span class="val font-mono">SQLite 3</span>
                             </div>
                             <div class="db-stat-item">
-                                <span class="label">Integration State</span>
-                                <span class="val text-success">Synchronized</span>
+                                <span class="label">Connection Status</span>
+                                <span class="val text-success">Active & Synced</span>
                             </div>
                         </div>
                     </div>
                     
                     <!-- Quick Info -->
                     <div class="data-box info-box">
-                        <h3><i class="fa-solid fa-circle-info"></i> Project Details</h3>
-                        <p>Vortex is fully integrated with cutting-edge modules including live audio streams, Google Gemini AI modules, customized trivia systems, and advanced leveling cogs.</p>
+                        <h3><i class="fa-solid fa-circle-info"></i> Bot Configuration</h3>
+                        <p>Vortex is running with full multi-tenancy. You can configure music, moderation, custom autoresponders, and leveling cogs directly in Discord or monitor them in real-time here.</p>
                         <div class="info-badges">
-                            <span class="badge">python 3.10+</span>
-                            <span class="badge">discord.py v2</span>
-                            <span class="badge">gemini-api</span>
-                            <span class="badge">ytdl-core</span>
+                            <span class="badge">discord.py v2.4</span>
+                            <span class="badge">Gemini AI</span>
+                            <span class="badge">High-Res Audio</span>
+                            <span class="badge">SQLite Multi-Tenant</span>
                         </div>
                     </div>
                 </div>
@@ -160,16 +193,16 @@
             <!-- 🎵 TAB 2: MUSIC CONTROLLER -->
             <section id="tab-music" class="tab-pane">
                 <div class="section-header">
-                    <h2>Voice & Music Console</h2>
-                    <p>Track current playing status and manage music queues in active channels.</p>
+                    <h2>Music Console</h2>
+                    <p>Track current playing songs and manage the playlist queue.</p>
                 </div>
 
                 <div class="music-layout">
                     <!-- Player Box -->
                     <div class="music-card player-card">
                         <div class="guild-selector-wrapper">
-                            <label>Active Server:</label>
-                            <span class="active-connection-name" style="font-weight: 700; color: var(--color-cyan);"><i class="fa-solid fa-server"></i> {{ guild.name }}</span>
+                            <span>Active Channel:</span>
+                            <span class="active-connection-name" style="font-weight: 600; color: var(--color-primary);"><i class="fa-solid fa-volume-high"></i> {{ guild.name }}</span>
                             <select id="music-guild-select" class="guild-dropdown" style="display: none;">
                                 <option value="{{ guild.id }}" selected>{{ guild.name }}</option>
                             </select>
@@ -178,7 +211,7 @@
                         <div id="player-active-view" class="player-view-wrapper hidden">
                             <div class="now-playing-info">
                                 <div class="track-artwork">
-                                    <i class="fa-solid fa-compact-disc spin-animation"></i>
+                                    <i class="fa-solid fa-compact-disc"></i>
                                 </div>
                                 <div class="track-meta">
                                     <h3 id="current-track-title" class="track-title">Loading Track...</h3>
@@ -186,19 +219,19 @@
                                 </div>
                             </div>
 
-                            <!-- Progress (Fake/Stream Indication) -->
+                            <!-- Progress Indicator -->
                             <div class="progress-bar-container">
                                 <div class="stream-line"></div>
                                 <div class="progress-labels">
-                                    <span>0:00</span>
-                                    <span id="track-live-indicator" class="live-badge">LIVE STREAM</span>
+                                    <span>Playing</span>
+                                    <span id="track-live-indicator" class="live-badge">LIVE AUDIO</span>
                                 </div>
                             </div>
 
                             <!-- Player Controls -->
                             <div class="player-controls">
-                                <button id="btn-pause-resume" class="control-btn play-pause"><i class="fa-solid fa-play"></i></button>
-                                <button id="btn-skip" class="control-btn"><i class="fa-solid fa-forward-step"></i></button>
+                                <button id="btn-pause-resume" class="control-btn play-pause" aria-label="Play or Pause"><i class="fa-solid fa-play"></i></button>
+                                <button id="btn-skip" class="control-btn" aria-label="Skip"><i class="fa-solid fa-forward-step"></i></button>
                             </div>
 
                             <!-- Volume Slider -->
@@ -211,17 +244,17 @@
 
                         <div id="player-empty-view" class="player-view-wrapper empty-state">
                             <i class="fa-solid fa-headphones"></i>
-                            <p>No active music streaming in any voice channels right now.</p>
-                            <span class="hint">Use `&play` or `&lofi` in Discord to connect the bot!</span>
+                            <p>No active music streaming in voice right now.</p>
+                            <span class="hint">Use <code>/play &lt;song&gt;</code> or <code>/radio_lofi</code> in your server!</span>
                         </div>
                     </div>
 
                     <!-- Queue Box -->
                     <div class="music-card queue-card">
-                        <h3>Up Next</h3>
+                        <h3>Up Next in Queue</h3>
                         <div class="queue-list-wrapper">
                             <ul id="music-queue-list" class="queue-list">
-                                <li class="empty-queue">Queue is empty</li>
+                                <li class="empty-queue">Queue is currently empty</li>
                             </ul>
                         </div>
                     </div>
@@ -232,7 +265,7 @@
             <section id="tab-leaderboards" class="tab-pane">
                 <div class="section-header">
                     <h2>Server Leaderboards</h2>
-                    <p>View the top active and wealthiest players from Vortex records.</p>
+                    <p>View the top active and wealthiest members in {{ guild.name }}.</p>
                 </div>
 
                 <div class="leaderboards-grid">
@@ -258,7 +291,7 @@
 
                     <!-- Economy Leaderboard -->
                     <div class="leaderboard-card">
-                        <h3><i class="fa-solid fa-sack-dollar text-success"></i> Economy Wealth</h3>
+                        <h3><i class="fa-solid fa-coins text-success"></i> Economy Wealth</h3>
                         <div class="table-container">
                             <table>
                                 <thead>
@@ -282,14 +315,14 @@
             <!-- 📚 TAB 4: DOCS -->
             <section id="tab-docs" class="tab-pane">
                 <div class="section-header">
-                    <h2>Command Reference & Aliases</h2>
-                    <p>A reference cheatsheet for Vortex commands and shortcuts.</p>
+                    <h2>Command Reference</h2>
+                    <p>Quick lookup for popular commands and usage shortcuts.</p>
                 </div>
 
                 <div class="docs-wrapper">
                     <div class="docs-search-bar">
                         <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" id="docs-search-input" placeholder="Search music or radio commands...">
+                        <input type="text" id="docs-search-input" placeholder="Search commands or aliases...">
                     </div>
 
                     <div class="table-container">
@@ -298,58 +331,58 @@
                                 <tr>
                                     <th>Category</th>
                                     <th>Command</th>
-                                    <th>Aliases / Shortcuts</th>
-                                    <th>Usage Examples</th>
+                                    <th>Aliases</th>
+                                    <th>Examples</th>
                                 </tr>
                             </thead>
                             <tbody id="docs-table-body">
                                 <tr>
-                                    <td><span class="badge music-badge">Music</span></td>
+                                    <td><span class="badge">Music</span></td>
                                     <td><strong>play</strong></td>
-                                    <td>`p`, `start`</td>
-                                    <td>`&p study beats`, `/play lofi hiphop`</td>
+                                    <td><code>p</code>, <code>start</code></td>
+                                    <td><code>&play study beats</code>, <code>/play lofi</code></td>
                                 </tr>
                                 <tr>
-                                    <td><span class="badge music-badge">Music</span></td>
+                                    <td><span class="badge">Music</span></td>
                                     <td><strong>volume</strong></td>
-                                    <td>`vol`, `v`</td>
-                                    <td>`&vol 50`, `/volume 80`</td>
+                                    <td><code>vol</code>, <code>v</code></td>
+                                    <td><code>&volume 50</code>, <code>/volume 80</code></td>
                                 </tr>
                                 <tr>
-                                    <td><span class="badge music-badge">Music</span></td>
+                                    <td><span class="badge">Music</span></td>
                                     <td><strong>skip</strong></td>
-                                    <td>`s`, `next`</td>
-                                    <td>`&s`, `/skip`</td>
+                                    <td><code>s</code>, <code>next</code></td>
+                                    <td><code>&skip</code>, <code>/skip</code></td>
                                 </tr>
                                 <tr>
-                                    <td><span class="badge music-badge">Music</span></td>
+                                    <td><span class="badge">Music</span></td>
                                     <td><strong>nowplaying</strong></td>
-                                    <td>`np`, `song`, `current`</td>
-                                    <td>`&np`, `/nowplaying`</td>
+                                    <td><code>np</code>, <code>song</code></td>
+                                    <td><code>&np</code>, <code>/nowplaying</code></td>
                                 </tr>
                                 <tr>
-                                    <td><span class="badge radio-badge">Radio</span></td>
+                                    <td><span class="badge">Radio</span></td>
                                     <td><strong>radio_lofi</strong></td>
-                                    <td>`lofi`, `rl`</td>
-                                    <td>`&lofi`, `/radio_lofi`</td>
+                                    <td><code>lofi</code>, <code>rl</code></td>
+                                    <td><code>&lofi</code>, <code>/radio_lofi</code></td>
                                 </tr>
                                 <tr>
-                                    <td><span class="badge radio-badge">Radio</span></td>
+                                    <td><span class="badge">Radio</span></td>
                                     <td><strong>radio_synthwave</strong></td>
-                                    <td>`synthwave`, `rs`</td>
-                                    <td>`&rs`, `/radio_synthwave`</td>
+                                    <td><code>synthwave</code>, <code>rs</code></td>
+                                    <td><code>&synthwave</code>, <code>/radio_synthwave</code></td>
                                 </tr>
                                 <tr>
-                                    <td><span class="badge radio-badge">Radio</span></td>
+                                    <td><span class="badge">Radio</span></td>
                                     <td><strong>radio_jazz</strong></td>
-                                    <td>`jazz`, `rj`</td>
-                                    <td>`&rj`, `/radio_jazz`</td>
+                                    <td><code>jazz</code>, <code>rj</code></td>
+                                    <td><code>&jazz</code>, <code>/radio_jazz</code></td>
                                 </tr>
                                 <tr>
-                                    <td><span class="badge radio-badge">Radio</span></td>
+                                    <td><span class="badge">Radio</span></td>
                                     <td><strong>radio_classical</strong></td>
-                                    <td>`classical`, `piano`, `rcp`</td>
-                                    <td>`&piano`, `/radio_classical`</td>
+                                    <td><code>piano</code>, <code>rcp</code></td>
+                                    <td><code>&piano</code>, <code>/radio_classical</code></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -360,8 +393,8 @@
             <!-- 🛡️ TAB 5: MODERATION -->
             <section id="tab-moderation" class="tab-pane">
                 <div class="section-header">
-                    <h2>Moderation Portal</h2>
-                    <p>Track active warnings and temporary bans enforced across connected servers.</p>
+                    <h2>Moderation Logs</h2>
+                    <p>Recent member warnings and active temporary bans in {{ guild.name }}.</p>
                 </div>
 
                 <div class="moderation-layout">
@@ -371,7 +404,7 @@
                             <h3>Recent Warnings</h3>
                             <div class="search-field-wrapper">
                                 <i class="fa-solid fa-magnifying-glass"></i>
-                                <input type="text" id="warning-search-input" placeholder="Search by User ID...">
+                                <input type="text" id="warning-search-input" placeholder="Filter by User ID...">
                             </div>
                         </div>
                         <div class="table-container">
@@ -382,7 +415,7 @@
                                         <th>User ID</th>
                                         <th>Username</th>
                                         <th>Reason</th>
-                                        <th>Timestamp</th>
+                                        <th>Time</th>
                                     </tr>
                                 </thead>
                                 <tbody id="warnings-table-body">
@@ -418,13 +451,13 @@
             <section id="tab-rpg" class="tab-pane">
                 <div class="section-header">
                     <h2>RPG Profiles & Autoresponders</h2>
-                    <p>Track player leveling in Vortex RPG and manage custom tag configurations.</p>
+                    <p>Track adventurer progress and server trigger replies.</p>
                 </div>
 
                 <div class="rpg-layout">
                     <!-- RPG Profiles -->
                     <div class="data-box rpg-profiles">
-                        <h3>Active RPG Adventurers</h3>
+                        <h3>Active RPG Players</h3>
                         <div class="table-container">
                             <table>
                                 <thead>
@@ -450,7 +483,7 @@
                     <!-- Custom Autoresponders & Tags -->
                     <div class="rpg-sub-layout">
                         <div class="data-box custom-tags-box">
-                            <h3>Custom Tags List</h3>
+                            <h3>Custom Server Tags</h3>
                             <div class="table-container">
                                 <table>
                                     <thead>
@@ -473,8 +506,8 @@
                                 <table>
                                     <thead>
                                         <tr>
-                                            <th>Trigger Pattern</th>
-                                            <th>Response Content</th>
+                                            <th>Trigger</th>
+                                            <th>Reply</th>
                                             <th>Match</th>
                                         </tr>
                                     </thead>
@@ -491,14 +524,14 @@
             <!-- 🎉 TAB 7: GIVEAWAYS & TICKETS -->
             <section id="tab-features" class="tab-pane">
                 <div class="section-header">
-                    <h2>Giveaways & Active Contests</h2>
-                    <p>Monitor active community giveaways and open support queues.</p>
+                    <h2>Giveaways & Modules</h2>
+                    <p>Active giveaway events and enabled feature modules.</p>
                 </div>
 
                 <div class="features-layout">
                     <!-- Active Giveaways -->
                     <div class="data-box giveaways-box">
-                        <h3>Giveaway Events</h3>
+                        <h3>Active Giveaways</h3>
                         <div class="table-container">
                             <table>
                                 <thead>
@@ -517,22 +550,22 @@
                         </div>
                     </div>
 
-                    <!-- Active Reminders / General info -->
+                    <!-- Feature Modules -->
                     <div class="data-box help-features-box">
-                        <h3>Vortex Modules Configuration</h3>
-                        <p>The dashboard connects in real-time to the SQLite local database to display updates. Modifying these configurations can be done in Discord using command cogs.</p>
+                        <h3>Active Bot Features</h3>
+                        <p>Vortex connects directly to your server database to execute moderation, economy, and AI features.</p>
                         <div class="config-modules-grid">
                             <div class="module-card-status">
                                 <span class="dot active"></span>
-                                <span class="name">AI suite (Gemini)</span>
+                                <span class="name">AI Engine (Gemini)</span>
                             </div>
                             <div class="module-card-status">
                                 <span class="dot active"></span>
-                                <span class="name">Web Radio Streamer</span>
+                                <span class="name">24/7 Web Radios</span>
                             </div>
                             <div class="module-card-status">
                                 <span class="dot active"></span>
-                                <span class="name">Economy shop</span>
+                                <span class="name">Server Economy</span>
                             </div>
                             <div class="module-card-status">
                                 <span class="dot active"></span>

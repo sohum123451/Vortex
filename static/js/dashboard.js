@@ -8,6 +8,30 @@ document.addEventListener("DOMContentLoaded", () => {
     let musicStateData = [];
 
     // ==========================================
+    // 📱 MOBILE DRAWER CONTROLS
+    // ==========================================
+    const mobileMenuBtn = document.getElementById("mobile-menu-btn");
+    const closeDrawerBtn = document.getElementById("close-drawer-btn");
+    const sidebarDrawer = document.getElementById("sidebar-drawer");
+    const mobileBackdrop = document.getElementById("mobile-backdrop");
+
+    function openMobileDrawer() {
+        if (sidebarDrawer) sidebarDrawer.classList.add("open");
+        if (mobileBackdrop) mobileBackdrop.classList.add("active");
+        document.body.style.overflow = "hidden";
+    }
+
+    function closeMobileDrawer() {
+        if (sidebarDrawer) sidebarDrawer.classList.remove("open");
+        if (mobileBackdrop) mobileBackdrop.classList.remove("active");
+        document.body.style.overflow = "";
+    }
+
+    if (mobileMenuBtn) mobileMenuBtn.addEventListener("click", openMobileDrawer);
+    if (closeDrawerBtn) closeDrawerBtn.addEventListener("click", closeMobileDrawer);
+    if (mobileBackdrop) mobileBackdrop.addEventListener("click", closeMobileDrawer);
+
+    // ==========================================
     // 🧭 TAB NAVIGATION SWITCHER
     // ==========================================
     const navLinks = document.querySelectorAll(".nav-link");
@@ -29,6 +53,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     pane.classList.add("active");
                 }
             });
+
+            // Automatically close drawer on mobile after selection
+            if (window.innerWidth <= 992) {
+                closeMobileDrawer();
+            }
 
             // Trigger fetch once when switching to specific panels
             if (tabId === "leaderboards") {
