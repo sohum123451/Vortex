@@ -3,11 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vortex — The Discord Bot Dashboard</title>
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Vortex Discord Bot — Dashboard</title>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Stylesheet -->
@@ -18,173 +14,147 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            background-color: #0d0f14;
+            background-color: #111214;
             margin: 0;
-            padding: 24px 16px;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            color: #f8fafc;
+            padding: 20px 16px;
+            color: #dbdee1;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
         .landing-container {
-            max-width: 720px;
+            max-width: 640px;
             width: 100%;
-            background: #141720;
-            border: 1px solid #202532;
-            border-radius: 24px;
-            padding: 48px 36px;
-            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+            background: #2b2d31;
+            border: 1px solid #3f4147;
+            border-radius: 8px;
+            padding: 40px 32px;
             text-align: center;
         }
 
-        .brand-badge {
+        .landing-logo {
+            width: 48px;
+            height: 48px;
+            background: #5865f2;
+            border-radius: 12px;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 6px 14px;
-            background: rgba(88, 101, 242, 0.1);
-            border: 1px solid rgba(88, 101, 242, 0.25);
-            border-radius: 9999px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #5865f2;
+            justify-content: center;
+            color: #fff;
+            font-size: 1.5rem;
             margin-bottom: 20px;
         }
 
         .landing-title {
-            font-family: 'Outfit', sans-serif;
-            font-size: 2.5rem;
-            font-weight: 800;
-            line-height: 1.2;
-            margin-bottom: 12px;
-            color: #fff;
+            font-size: 1.8rem;
+            font-weight: 700;
+            line-height: 1.25;
+            margin-bottom: 10px;
+            color: #f2f3f5;
         }
 
         .landing-subtitle {
-            font-size: 1.05rem;
-            color: #94a3b8;
-            line-height: 1.6;
-            margin-bottom: 32px;
-            max-width: 520px;
-            margin-left: auto;
-            margin-right: auto;
+            font-size: 0.95rem;
+            color: #949ba4;
+            line-height: 1.55;
+            margin-bottom: 28px;
         }
 
         .login-btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 12px;
+            gap: 10px;
             background: #5865f2;
             color: #fff;
-            padding: 14px 32px;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 1rem;
+            padding: 12px 28px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.95rem;
             text-decoration: none;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 16px rgba(88, 101, 242, 0.35);
+            transition: background 0.15s ease;
         }
 
         .login-btn:hover {
             background: #4752c4;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(88, 101, 242, 0.45);
         }
 
         .features-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-            margin-top: 40px;
-            padding-top: 32px;
-            border-top: 1px solid #202532;
+            gap: 12px;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #3f4147;
+            text-align: left;
         }
 
         .feature-item {
-            background: #1a1e29;
-            border: 1px solid #202532;
-            padding: 20px 16px;
-            border-radius: 14px;
-            text-align: left;
-            transition: border-color 0.2s ease;
+            background: #1e1f22;
+            border: 1px solid #35373c;
+            padding: 16px 14px;
+            border-radius: 6px;
         }
-
-        .feature-item:hover {
-            border-color: #2b3244;
-        }
-
-        .feature-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-            margin-bottom: 12px;
-        }
-
-        .icon-music { background: rgba(88, 101, 242, 0.15); color: #5865f2; }
-        .icon-mod { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-        .icon-rpg { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
 
         .feature-title {
-            font-weight: 700;
-            font-size: 0.95rem;
-            color: #fff;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #f2f3f5;
             margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .feature-title i {
+            color: #5865f2;
+            font-size: 0.85rem;
         }
 
         .feature-desc {
-            font-size: 0.82rem;
-            color: #94a3b8;
-            line-height: 1.45;
+            font-size: 0.8rem;
+            color: #949ba4;
+            line-height: 1.4;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 600px) {
             .landing-container {
-                padding: 32px 20px;
+                padding: 28px 18px;
             }
             .landing-title {
-                font-size: 2rem;
+                font-size: 1.5rem;
             }
             .features-grid {
                 grid-template-columns: 1fr;
-                gap: 12px;
             }
         }
     </style>
 </head>
 <body>
     <div class="landing-container">
-        <div class="brand-badge">
+        <div class="landing-logo">
             <i class="fa-solid fa-bolt"></i>
-            <span>Vortex Server Dashboard</span>
         </div>
 
-        <h1 class="landing-title">Manage Your Discord Server With Ease</h1>
-        <p class="landing-subtitle">Control music playback, inspect moderation logs, track player XP rankings, and configure custom autoresponders from a clean web interface.</p>
+        <h1 class="landing-title">Vortex Server Dashboard</h1>
+        <p class="landing-subtitle">A web control panel to manage music queues, check server leaderboards, monitor moderation logs, and view bot commands.</p>
         
         <a href="/login" class="login-btn">
             <i class="fa-brands fa-discord"></i>
-            <span>Login with Discord</span>
+            <span>Log In with Discord</span>
         </a>
 
         <div class="features-grid">
             <div class="feature-item">
-                <div class="feature-icon icon-music"><i class="fa-solid fa-music"></i></div>
-                <div class="feature-title">High-Res Audio & Radio</div>
-                <p class="feature-desc">Control active queues and stream 24/7 web radios with zero latency.</p>
+                <div class="feature-title"><i class="fa-solid fa-music"></i> Music Control</div>
+                <p class="feature-desc">Manage voice playback and 24/7 web radios.</p>
             </div>
             <div class="feature-item">
-                <div class="feature-icon icon-mod"><i class="fa-solid fa-shield-halved"></i></div>
-                <div class="feature-title">Moderation & Safety</div>
-                <p class="feature-desc">View recent warnings, tempbans, and member infraction history.</p>
+                <div class="feature-title"><i class="fa-solid fa-shield-halved"></i> Mod History</div>
+                <p class="feature-desc">Check active warnings and temporary bans.</p>
             </div>
             <div class="feature-item">
-                <div class="feature-icon icon-rpg"><i class="fa-solid fa-trophy"></i></div>
-                <div class="feature-title">XP & Economy Ranks</div>
-                <p class="feature-desc">Real-time leaderboard for server activity and casino coin balances.</p>
+                <div class="feature-title"><i class="fa-solid fa-trophy"></i> Leaderboards</div>
+                <p class="feature-desc">View top active and wealthiest server members.</p>
             </div>
         </div>
     </div>
