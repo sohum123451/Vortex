@@ -7,7 +7,10 @@ from discord.ext import commands
 import yt_dlp as youtube_dl
 from utils import MAIN_COLOR, SUCCESS_COLOR, WARN_COLOR, ERROR_COLOR, INFO_COLOR
 
-# yt-dlp configuration
+import os
+
+# yt-dlp configuration with mobile/embedded client rotation & cookie support
+cookies_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "cookies.txt")
 ytdl_format_options = {
     'format': 'bestaudio/best',
     'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
@@ -18,9 +21,23 @@ ytdl_format_options = {
     'logtostderr': False,
     'quiet': True,
     'no_warnings': True,
-    'default_search': 'auto',
+    'default_search': 'ytsearch',
     'source_address': '0.0.0.0',
+    'extractor_args': {
+        'youtube': {
+            'player_client': ['android', 'ios', 'web_embedded', 'mweb'],
+            'player_skip': ['webpage', 'configs'],
+        }
+    },
+    'http_headers': {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+    }
 }
+
+if os.path.exists(cookies_file):
+    ytdl_format_options['cookiefile'] = cookies_file
 
 ffmpeg_options = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
@@ -28,6 +45,7 @@ ffmpeg_options = {
 }
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
+ytdl_sc = youtube_dl.YoutubeDL({**ytdl_format_options, 'default_search': 'scsearch'})
 
 RADIO_STREAMS = {
     "lofi": ("https://stream.zeno.fm/f3wvbbqmdg8uv", "Lofi Hip Hop Chill Beats ☕", 0.6),
@@ -53,10 +71,31 @@ class YTDLSource(discord.PCMVolumeTransformer):
     @classmethod
     async def from_query(cls, query, *, loop=None, stream=True):
         loop = loop or asyncio.get_event_loop()
-        to_run = functools.partial(ytdl.extract_info, query, download=not stream)
-        data = await loop.run_in_executor(None, to_run)
+        
+        # 1. First attempt: Standard extractor with Android/iOS player clients
+        try:
+            to_run = functools.partial(ytdl.extract_info, query, download=not stream)
+            data = await loop.run_in_executor(None, to_run)
+        except Exception as yt_err:
+            # 2. Fallback attempt: If YouTube datacenter bot challenge triggers, fallback to SoundCloud search
+            clean_query = query
+            if "youtube.com" in query or "youtu.be" in query:
+                # If it's a blocked YouTube URL, extract title or query fallback
+                clean_query = re.sub(r'https?://[^\s]+', '', query).strip() or query
+            
+            sc_query = f"scsearch:{clean_query}" if not clean_query.startswith("scsearch:") else clean_query
+            try:
+                to_run_sc = functools.partial(ytdl_sc.extract_info, sc_query, download=not stream)
+                data = await loop.run_in_executor(None, to_run_sc)
+            except Exception:
+                raise yt_err
+
+        if not data:
+            raise Exception("No search results found.")
 
         if 'entries' in data:
+            if not data['entries']:
+                raise Exception("No playable audio tracks found.")
             data = data['entries'][0]
 
         filename = data['url'] if stream else ytdl.prepare_filename(data)
