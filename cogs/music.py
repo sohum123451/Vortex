@@ -57,6 +57,17 @@ RADIO_STREAMS = {
     "gaming": ("https://stream.zeno.fm/65q750ydg8uv", "Epic Gaming Bass & Electro 🎮", 0.6),
 }
 
+def format_duration(duration):
+    if not duration:
+        return "Stream"
+    try:
+        total_seconds = int(float(duration))
+        minutes = total_seconds // 60
+        seconds = total_seconds % 60
+        return f"{minutes}:{seconds:02d}"
+    except Exception:
+        return "Stream"
+
 class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source, *, data, volume=0.5):
         super().__init__(source, volume)
@@ -151,7 +162,7 @@ class MusicControls(discord.ui.View):
             return await interaction.response.send_message("📭 Queue is currently empty.", ephemeral=True)
         desc = [f"**Now Playing:** 🎵 `{state.current.title if state.current else 'None'}`\n"]
         for idx, s in enumerate(state.queue[:10], start=1):
-            dur = f"{s.duration // 60}:{s.duration % 60:02d}" if s.duration else "Live"
+            dur = format_duration(s.duration)
             desc.append(f"**{idx}.** `{s.title}` — `{dur}`")
         if len(state.queue) > 10:
             desc.append(f"\n*...and {len(state.queue) - 10} more songs in queue.*")
@@ -199,7 +210,7 @@ class Music(commands.Cog):
             next_source.volume = state.volume
             vc.play(next_source, after=lambda e: self.play_next_song(ctx))
             
-            dur = f"{next_source.duration // 60}:{next_source.duration % 60:02d}" if next_source.duration else "Stream"
+            dur = format_duration(next_source.duration)
             embed = discord.Embed(
                 title="🎵 Now Playing",
                 description=f"**[{next_source.title}]({next_source.webpage_url})**\n\n⏱️ Duration: `{dur}` | 👤 Artist: `{next_source.uploader}`",
@@ -235,7 +246,7 @@ class Music(commands.Cog):
         vc = ctx.guild.voice_client
         if vc.is_playing() or vc.is_paused():
             state.queue.append(source)
-            dur = f"{source.duration // 60}:{source.duration % 60:02d}" if source.duration else "Stream"
+            dur = format_duration(source.duration)
             embed = discord.Embed(
                 title="➕ Added to Queue",
                 description=f"**[{source.title}]({source.webpage_url})**\n⏱️ Duration: `{dur}` | 📊 Position: `#{len(state.queue)}`",
@@ -248,7 +259,7 @@ class Music(commands.Cog):
             state.current = source
             source.volume = state.volume
             vc.play(source, after=lambda e: self.play_next_song(ctx))
-            dur = f"{source.duration // 60}:{source.duration % 60:02d}" if source.duration else "Stream"
+            dur = format_duration(source.duration)
             embed = discord.Embed(
                 title="🎵 Now Playing",
                 description=f"**[{source.title}]({source.webpage_url})**\n\n⏱️ Duration: `{dur}` | 👤 Artist: `{source.uploader}`",
@@ -305,13 +316,13 @@ class Music(commands.Cog):
 
         desc = []
         if state.current:
-            dur = f"{state.current.duration // 60}:{state.current.duration % 60:02d}" if state.current.duration else "Stream"
+            dur = format_duration(state.current.duration)
             desc.append(f"**Now Playing:** 🎵 [{state.current.title}]({state.current.webpage_url}) (`{dur}`)\n")
 
         if state.queue:
             desc.append("**Up Next:**")
             for idx, song in enumerate(state.queue[:10], start=1):
-                dur = f"{song.duration // 60}:{song.duration % 60:02d}" if song.duration else "Stream"
+                dur = format_duration(song.duration)
                 desc.append(f"**{idx}.** [{song.title}]({song.webpage_url}) (`{dur}`)")
             if len(state.queue) > 10:
                 desc.append(f"\n*...and {len(state.queue) - 10} more songs in queue.*")
@@ -325,7 +336,7 @@ class Music(commands.Cog):
         if not state.current:
             return await ctx.reply("❌ Nothing is currently playing.")
         song = state.current
-        dur = f"{song.duration // 60}:{song.duration % 60:02d}" if song.duration else "Live Stream"
+        dur = format_duration(song.duration)
         embed = discord.Embed(
             title="🎵 Now Playing",
             description=f"**[{song.title}]({song.webpage_url})**\n\n⏱️ **Duration:** `{dur}`\n👤 **Channel:** `{song.uploader}`\n🔊 **Volume:** `{int(state.volume * 100)}%`",
