@@ -156,7 +156,10 @@ def dashboard_view():
     if not is_authorized(guild_id):
         return "Unauthorized: You do not manage this server.", 403
         
-    guild = bot.get_guild(int(guild_id)) if bot.is_ready() else None
+    if not bot.is_ready():
+        return render_template("loading.html", guild_id=guild_id)
+        
+    guild = bot.get_guild(int(guild_id))
     if not guild:
         invite_url = f"https://discord.com/api/oauth2/authorize?client_id={DISCORD_CLIENT_ID}&permissions=8&scope=bot%20applications.commands&guild_id={guild_id}&disable_guild_select=true"
         return redirect(invite_url)

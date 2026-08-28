@@ -269,11 +269,33 @@ class Developer(commands.Cog):
         await ctx.author.send(content="💾 **Database Backup:**", file=file)
         await ctx.reply("📬 Database file sent to your DMs!")
 
-    @commands.command(name="restart", description="[Owner] Restart the PM2 bot process")
+    @commands.command(name="sync", description="[Owner] Sync slash commands globally")
     @commands.is_owner()
-    async def restart_bot(self, ctx):
-        await ctx.reply("🔄 Restarting bot service with PM2 on AWS EC2...")
-        await asyncio.create_subprocess_shell("pm2 restart discord-bot")
+    async def sync_commands(self, ctx):
+        msg = await ctx.reply("🔄 Syncing slash commands globally...")
+        try:
+            synced = await self.bot.tree.sync()
+            await msg.edit(content=f"✅ Successfully synced **{len(synced)}** slash commands globally.")
+        except Exception as e:
+            await msg.edit(content=f"❌ Error syncing commands: {e}")
+
+    @commands.command(name="clearsync", description="[Owner] Clear guild-specific slash commands to fix duplicates")
+    @commands.is_owner()
+    async def clear_guild_sync(self, ctx):
+        msg = await ctx.reply("🧹 Clearing guild-specific slash commands for this server...")
+        try:
+            self.bot.tree.clear_commands(guild=ctx.guild)
+            await self.bot.tree.sync(guild=ctx.guild)
+            await msg.edit(content=f"✅ Cleared guild-specific commands for **{ctx.guild.name}**. Any duplicate slash commands have been removed.")
+        except Exception as e:
+            await msg.edit(content=f"❌ Error clearing guild sync: {e}")
+
+    @commands.command(name="stopbot", description="[Owner] Stop/Shutdown the current bot process")
+    @commands.is_owner()
+    async def stop_bot_process(self, ctx):
+        await ctx.reply("🛑 Shutting down bot instance...")
+        await self.bot.close()
 
 async def setup(bot):
     await bot.add_cog(Developer(bot))
+
