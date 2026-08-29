@@ -243,13 +243,24 @@ class Utility(commands.Cog):
 
     @commands.hybrid_command(name="afk", description="Set AFK status: &afk Working on project")
     async def afk(self, ctx, *, reason="AFK"):
-        with sqlite3.connect(DB_FILE) as conn:
-            cur = conn.cursor()
-            cur.execute(
-                "INSERT OR REPLACE INTO afk (user_id, reason, timestamp) VALUES (?, ?, ?)",
-                (str(ctx.author.id), reason, datetime.now(timezone.utc).isoformat()),
-            )
-            conn.commit()
+        uid = str(ctx.author.id)
+        ts = datetime.now(timezone.utc).isoformat()
+        if not hasattr(self, 'afk_cache'):
+            self.afk_cache = {}
+        self.afk_cache[uid] = (reason, ts)
+        
+        async def _save():
+            try:
+                with sqlite3.connect(DB_FILE) as conn:
+                    cur = conn.cursor()
+                    cur.execute(
+                        "INSERT OR REPLACE INTO afk (user_id, reason, timestamp) VALUES (?, ?, ?)",
+                        (uid, reason, ts),
+                    )
+                    conn.commit()
+            except Exception:
+                pass
+        asyncio.create_task(_save())
         await ctx.reply(f"💤 {ctx.author.mention} is now AFK: **{reason}**")
 
     # Snipe & EditSnipe listeners
@@ -293,21 +304,28 @@ class Utility(commands.Cog):
         if message.author.bot:
             return
 
-        with sqlite3.connect(DB_FILE) as conn:
-            cur = conn.cursor()
-            cur.execute("SELECT reason FROM afk WHERE user_id = ?", (str(message.author.id),))
-            row = cur.fetchone()
-            if row and not message.content.startswith(("&afk", "/afk")):
-                cur.execute("DELETE FROM afk WHERE user_id = ?", (str(message.author.id),))
-                conn.commit()
-                await message.reply(f"👋 Welcome back {message.author.mention}! Your AFK status has been cleared.", delete_after=5)
+        if not hasattr(self, 'afk_cache'):
+            self.afk_cache = {}
 
-            for mention in message.mentions:
-                cur.execute("SELECT reason, timestamp FROM afk WHERE user_id = ?", (str(mention.id),))
-                afk_row = cur.fetchone()
-                if afk_row:
-                    reason, ts = afk_row
-                    await message.reply(f"💤 **{mention.display_name}** is AFK: *{reason}*", delete_after=6)
+        uid = str(message.author.id)
+        if uid in self.afk_cache and not message.content.startswith(("&afk", "/afk")):
+            del self.afk_cache[uid]
+            async def _del():
+                try:
+                    with sqlite3.connect(DB_FILE) as conn:
+                        cur = conn.cursor()
+                        cur.execute("DELETE FROM afk WHERE user_id = ?", (uid,))
+                        conn.commit()
+                except Exception:
+                    pass
+            asyncio.create_task(_del())
+            await message.reply(f"👋 Welcome back {message.author.mention}! Your AFK status has been cleared.", delete_after=5)
+
+        for mention in message.mentions:
+            muid = str(mention.id)
+            if muid in self.afk_cache:
+                reason, ts = self.afk_cache[muid]
+                await message.reply(f"💤 **{mention.display_name}** is AFK: *{reason}*", delete_after=6)
 
     @commands.command(name="password_gen", description="Generate a secure random password: &password_gen [length]")
     async def password_gen(self, ctx, length: int = 16):

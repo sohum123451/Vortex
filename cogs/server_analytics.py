@@ -2,7 +2,7 @@ import asyncio
 import sqlite3
 from datetime import datetime, timezone
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from utils import DB_FILE, MAIN_COLOR, INFO_COLOR, SUCCESS_COLOR
 
 class ServerAnalytics(commands.Cog):
@@ -10,38 +10,72 @@ class ServerAnalytics(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        # In-memory buffer: {(guild_id, user_id, date_str): message_count}
+        self.buffer = {}
+        self.flush_loop.start()
+
+    def cog_unload(self):
+        self.flush_loop.cancel()
+        self.flush_buffer_sync()
+
+    def flush_buffer_sync(self):
+        """Batch-flushes message activity buffer to database."""
+        if not self.buffer:
+            return
+        items = list(self.buffer.items())
+        self.buffer.clear()
+
+        try:
+            with sqlite3.connect(DB_FILE) as conn:
+                cur = conn.cursor()
+                for (gid, uid, date_str), count in items:
+                    cur.execute(
+                        """
+                        INSERT INTO server_analytics (guild_id, user_id, date_str, messages)
+                        VALUES (?, ?, ?, ?)
+                        ON CONFLICT(guild_id, user_id, date_str) DO UPDATE SET messages = messages + ?
+                        """,
+                        (gid, uid, date_str, count, count),
+                    )
+                conn.commit()
+        except Exception as e:
+            print(f"[ServerAnalytics] Background flush error: {e}", flush=True)
+
+    @tasks.loop(seconds=20)
+    async def flush_loop(self):
+        await asyncio.to_thread(self.flush_buffer_sync)
+
+    @flush_loop.before_loop
+    async def before_flush_loop(self):
+        await self.bot.wait_until_ready()
 
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot or not message.guild:
             return
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        with sqlite3.connect(DB_FILE) as conn:
-            cur = conn.cursor()
-            cur.execute(
-                """
-                INSERT INTO server_analytics (guild_id, user_id, date_str, messages)
-                VALUES (?, ?, ?, 1)
-                ON CONFLICT(guild_id, user_id, date_str) DO UPDATE SET messages = messages + 1
-                """,
-                (str(message.guild.id), str(message.author.id), today),
-            )
-            conn.commit()
+        key = (str(message.guild.id), str(message.author.id), today)
+        self.buffer[key] = self.buffer.get(key, 0) + 1
 
     @commands.hybrid_command(name="server_activity", description="View server message activity breakdown")
     async def server_activity(self, ctx):
         if not ctx.guild:
             return await ctx.reply("❌ This command must be used in a server.")
+        await asyncio.to_thread(self.flush_buffer_sync)
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        with sqlite3.connect(DB_FILE) as conn:
-            cur = conn.cursor()
-            cur.execute(
-                "SELECT SUM(messages), COUNT(DISTINCT user_id) FROM server_analytics WHERE guild_id = ? AND date_str = ?",
-                (str(ctx.guild.id), today),
-            )
-            today_data = cur.fetchone()
-            cur.execute("SELECT SUM(messages) FROM server_analytics WHERE guild_id = ?", (str(ctx.guild.id),))
-            total_msgs = cur.fetchone()[0] or 0
+        
+        try:
+            with sqlite3.connect(DB_FILE) as conn:
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT SUM(messages), COUNT(DISTINCT user_id) FROM server_analytics WHERE guild_id = ? AND date_str = ?",
+                    (str(ctx.guild.id), today),
+                )
+                today_data = cur.fetchone()
+                cur.execute("SELECT SUM(messages) FROM server_analytics WHERE guild_id = ?", (str(ctx.guild.id),))
+                total_msgs = cur.fetchone()[0] or 0
+        except Exception as e:
+            return await ctx.reply(f"❌ Error fetching analytics: {e}")
 
         today_msgs = today_data[0] or 0
         active_users = today_data[1] or 0
@@ -65,14 +99,19 @@ class ServerAnalytics(commands.Cog):
     async def top_chatters(self, ctx):
         if not ctx.guild:
             return await ctx.reply("❌ This command must be used in a server.")
+        await asyncio.to_thread(self.flush_buffer_sync)
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        with sqlite3.connect(DB_FILE) as conn:
-            cur = conn.cursor()
-            cur.execute(
-                "SELECT user_id, messages FROM server_analytics WHERE guild_id = ? AND date_str = ? ORDER BY messages DESC LIMIT 10",
-                (str(ctx.guild.id), today),
-            )
-            rows = cur.fetchall()
+        
+        try:
+            with sqlite3.connect(DB_FILE) as conn:
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT user_id, messages FROM server_analytics WHERE guild_id = ? AND date_str = ? ORDER BY messages DESC LIMIT 10",
+                    (str(ctx.guild.id), today),
+                )
+                rows = cur.fetchall()
+        except Exception as e:
+            return await ctx.reply(f"❌ Error: {e}")
 
         if not rows:
             return await ctx.reply("📊 No message activity recorded yet today.")
