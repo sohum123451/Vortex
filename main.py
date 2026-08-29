@@ -542,6 +542,52 @@ def get_active_features():
         "autoresponders": autoresponders
     })
 
+@app.route("/api/level_config", methods=["GET", "POST"])
+def handle_level_config():
+    guild_id = request.args.get("guild_id") or request.json.get("guild_id") if request.is_json else None
+    if not guild_id or not is_authorized(guild_id):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    if request.method == "POST":
+        data = request.json or {}
+        channel_id = data.get("channel_id", "current")
+        custom_msg = data.get("custom_msg", "🎉 **Level Up!** Congratulations {user}, you reached **Level {level}**! ⭐")
+        is_enabled = 1 if data.get("is_enabled", True) else 0
+
+        with sqlite3.connect(DB_FILE) as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT OR REPLACE INTO level_config (guild_id, channel_id, custom_msg, is_enabled) VALUES (?, ?, ?, ?)",
+                (guild_id, channel_id, custom_msg, is_enabled)
+            )
+            conn.commit()
+
+        # Update in-memory leveling cog config cache if loaded
+        leveling_cog = bot.get_cog("Leveling")
+        if leveling_cog:
+            leveling_cog.config_cache[guild_id] = [channel_id, custom_msg, is_enabled]
+
+        return jsonify({"success": True, "channel_id": channel_id, "custom_msg": custom_msg, "is_enabled": is_enabled})
+
+    # GET
+    default_msg = "🎉 **Level Up!** Congratulations {user}, you reached **Level {level}**! ⭐"
+    with sqlite3.connect(DB_FILE) as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT channel_id, custom_msg, is_enabled FROM level_config WHERE guild_id = ?", (guild_id,))
+        row = cur.fetchone()
+        if row:
+            return jsonify({
+                "channel_id": row[0] or "current",
+                "custom_msg": row[1] or default_msg,
+                "is_enabled": bool(row[2] if row[2] is not None else 1)
+            })
+
+    return jsonify({
+        "channel_id": "current",
+        "custom_msg": default_msg,
+        "is_enabled": True
+    })
+
 def run():
     app.run(host="0.0.0.0", port=8080)
 
@@ -626,6 +672,14 @@ def init_db():
                 level INTEGER DEFAULT 0,
                 messages INTEGER DEFAULT 0,
                 PRIMARY KEY (guild_id, user_id)
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS level_config (
+                guild_id TEXT PRIMARY KEY,
+                channel_id TEXT DEFAULT 'current',
+                custom_msg TEXT DEFAULT '🎉 **Level Up!** Congratulations {user}, you reached **Level {level}**! ⭐',
+                is_enabled INTEGER DEFAULT 1
             )
         """)
         cur.execute("""

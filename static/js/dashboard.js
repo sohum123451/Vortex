@@ -495,6 +495,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 respondersBody.innerHTML = `<tr><td colspan="3" class="loading">No active autoresponders.</td></tr>`;
             }
 
+            // Also load Leveling Config
+            fetchLevelConfig();
+
         } catch (err) {
             console.error("Error loading features:", err);
             giveawaysBody.innerHTML = `<tr><td colspan="5" class="loading text-danger">Failed to retrieve giveaways.</td></tr>`;
@@ -502,4 +505,62 @@ document.addEventListener("DOMContentLoaded", () => {
             respondersBody.innerHTML = `<tr><td colspan="3" class="loading text-danger">Failed to fetch responders.</td></tr>`;
         }
     }
+
+    window.fetchLevelConfig = async function() {
+        const guildSelect = document.getElementById("music-guild-select");
+        const guildId = guildSelect ? guildSelect.value : null;
+        if (!guildId) return;
+
+        try {
+            const res = await fetch(`/api/level_config?guild_id=${guildId}`);
+            const data = await res.json();
+            if (data) {
+                document.getElementById("level-status-select").value = data.is_enabled ? "enabled" : "disabled";
+                document.getElementById("level-channel-select").value = data.channel_id || "current";
+                document.getElementById("level-template-input").value = data.custom_msg || "🎉 **Level Up!** Congratulations {user}, you reached **Level {level}**! ⭐";
+            }
+        } catch (err) {
+            console.error("Error loading level config:", err);
+        }
+    };
+
+    window.saveLevelConfig = async function() {
+        const guildSelect = document.getElementById("music-guild-select");
+        const guildId = guildSelect ? guildSelect.value : null;
+        const statusSpan = document.getElementById("level-config-status");
+        if (!guildId) return;
+
+        const isEnabled = document.getElementById("level-status-select").value === "enabled";
+        const channelId = document.getElementById("level-channel-select").value;
+        const customMsg = document.getElementById("level-template-input").value;
+
+        statusSpan.style.color = "#a0a0a0";
+        statusSpan.textContent = "Saving...";
+
+        try {
+            const res = await fetch("/api/level_config", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    guild_id: guildId,
+                    is_enabled: isEnabled,
+                    channel_id: channelId,
+                    custom_msg: customMsg
+                })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                statusSpan.style.color = "#1dd1a1";
+                statusSpan.textContent = "✅ Leveling settings saved successfully!";
+                setTimeout(() => { statusSpan.textContent = ""; }, 4000);
+            } else {
+                statusSpan.style.color = "#ff6b6b";
+                statusSpan.textContent = "❌ Failed to save settings.";
+            }
+        } catch (err) {
+            statusSpan.style.color = "#ff6b6b";
+            statusSpan.textContent = "❌ Network error saving settings.";
+        }
+    };
 });
