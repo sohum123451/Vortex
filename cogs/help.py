@@ -24,7 +24,9 @@ def base_embed(title: str, description: str, color: int = THEME_COLOR) -> discor
 # ==========================================
 
 def help_home_embed(bot: commands.Bot) -> discord.Embed:
-    total_cmds = len(list(bot.walk_commands()))
+    if not hasattr(bot, "_cached_total_cmds") or not bot._cached_total_cmds:
+        bot._cached_total_cmds = len(list(bot.walk_commands()))
+    total_cmds = bot._cached_total_cmds
     latency = round(bot.latency * 1000)
     
     desc = (
@@ -473,6 +475,9 @@ class Help(commands.Cog):
     )
     async def help_command(self, ctx: commands.Context, *, query: str = None):
         """Interactive help menu or specific command lookup."""
+        if ctx.interaction and not ctx.interaction.response.is_done():
+            await ctx.defer()
+
         if not query:
             return await ctx.reply(embed=help_home_embed(self.bot), view=HelpView(self.bot, ctx.author))
 
