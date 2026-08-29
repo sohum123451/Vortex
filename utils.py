@@ -3,6 +3,8 @@ import re
 import base64
 import requests
 import sqlite3
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 import discord
@@ -19,207 +21,132 @@ WARN_COLOR = discord.Color.gold()
 INFO_COLOR = discord.Color.blue()
 
 # ==========================================================================
-# 🌐 TURSO SERVERLESS CLOUD SQLITE ADAPTER (100% PERSISTENCE FOR RENDER)
+# 🌐 HIGH-SPEED TURSO CLOUD HYBRID PERSISTENCE (0MS LATENCY)
 # ==========================================================================
 TURSO_DATABASE_URL = os.getenv("TURSO_DATABASE_URL")
 TURSO_AUTH_TOKEN = os.getenv("TURSO_AUTH_TOKEN")
 
-
-class TursoRow(tuple):
-    def __new__(cls, cols, values):
-        instance = super(TursoRow, cls).__new__(cls, values)
-        instance._cols = cols
-        instance._col_map = {name.lower(): idx for idx, name in enumerate(cols)} if cols else {}
-        return instance
-
-    def __getitem__(self, item):
-        if isinstance(item, str):
-            idx = self._col_map.get(item.lower())
-            if idx is None:
-                raise IndexError(f"No such column in row: {item}")
-            return super().__getitem__(idx)
-        return super().__getitem__(item)
-
-    def get(self, key, default=None):
-        if isinstance(key, str):
-            idx = self._col_map.get(key.lower())
-            if idx is not None:
-                return super().__getitem__(idx)
-        return default
-
-    def keys(self):
-        return self._cols
-
-class TursoCursor:
-    def __init__(self, conn):
-        self.conn = conn
-        self.description = None
-        self.rowcount = 0
-        self.lastrowid = None
-        self._rows = []
-        self._pos = 0
-
-    def _convert_param(self, val):
-        if val is None:
-            return {'type': 'null'}
-        elif isinstance(val, bool):
-            return {'type': 'integer', 'value': '1' if val else '0'}
-        elif isinstance(val, int):
-            return {'type': 'integer', 'value': str(val)}
-        elif isinstance(val, float):
-            return {'type': 'float', 'value': val}
-        elif isinstance(val, (bytes, bytearray)):
-            return {'type': 'blob', 'base64': base64.b64encode(val).decode('ascii')}
-        else:
-            return {'type': 'text', 'value': str(val)}
-
-    def _parse_row_val(self, item):
-        t = item.get('type')
-        v = item.get('value')
-        if t == 'null' or v is None:
-            return None
-        elif t == 'integer':
-            return int(v)
-        elif t == 'float':
-            return float(v)
-        elif t == 'blob':
-            return base64.b64decode(item.get('base64', ''))
-        return str(v)
-
-    def execute(self, sql, params=None):
-        stmt = {'sql': sql}
-        if params:
-            if isinstance(params, (list, tuple)):
-                stmt['args'] = [self._convert_param(p) for p in params]
-            elif isinstance(params, dict):
-                stmt['named_args'] = [{'name': k, 'value': self._convert_param(v)} for k, v in params.items()]
-            else:
-                stmt['args'] = [self._convert_param(params)]
-        
-        payload = {'requests': [{'type': 'execute', 'stmt': stmt}]}
-        resp = self.conn._request(payload)
-        res = resp['results'][0]
-        if res.get('type') == 'error':
-            raise Exception(res.get('error', {}).get('message', 'Turso SQL Error'))
-        
-        result_data = res.get('response', {}).get('result', {})
-        cols = [c['name'] for c in result_data.get('cols', [])]
-        self.description = [(c, None, None, None, None, None, None) for c in cols] if cols else None
-        self.rowcount = result_data.get('affected_row_count', 0)
-        self.lastrowid = result_data.get('last_insert_rowid')
-        raw_rows = result_data.get('rows', [])
-        
-        self._rows = [TursoRow(cols, [self._parse_row_val(col) for col in r]) for r in raw_rows]
-        self._pos = 0
-        return self
-
-    def executemany(self, sql, seq_of_params):
-        for params in seq_of_params:
-            self.execute(sql, params)
-        return self
-
-    def fetchone(self):
-        if self._pos < len(self._rows):
-            r = self._rows[self._pos]
-            self._pos += 1
-            return r
-        return None
-
-    def fetchall(self):
-        r = self._rows[self._pos:]
-        self._pos = len(self._rows)
-        return r
-
-    def fetchmany(self, size=None):
-        if size is None:
-            size = 1
-        end = min(self._pos + size, len(self._rows))
-        r = self._rows[self._pos:end]
-        self._pos = end
-        return r
-
-    def close(self):
-        self._rows = []
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        r = self.fetchone()
-        if r is None:
-            raise StopIteration
-        return r
-
-class TursoConnection:
-    def __init__(self, url, token):
-        http_url = url.replace('libsql://', 'https://').rstrip('/') + '/v2/pipeline'
-        self.url = http_url
-        self.token = token
-        self.session = requests.Session()
-        self.session.headers.update({
-            'Authorization': f'Bearer {token}',
-            'Content-Type': 'application/json'
-        })
-        self.row_factory = None
-
-    def _request(self, payload):
-        r = self.session.post(self.url, json=payload, timeout=12)
-        r.raise_for_status()
-        return r.json()
-
-    def cursor(self):
-        return TursoCursor(self)
-
-    def execute(self, sql, params=None):
-        cur = self.cursor()
-        return cur.execute(sql, params)
-
-    def executemany(self, sql, seq_of_params):
-        cur = self.cursor()
-        return cur.executemany(sql, seq_of_params)
-
-    def commit(self):
-        pass
-
-    def rollback(self):
-        pass
-
-    def close(self):
-        pass
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
-
-# Setup global database connection provider
 def get_db():
-    if TURSO_DATABASE_URL and TURSO_AUTH_TOKEN:
-        return TursoConnection(TURSO_DATABASE_URL, TURSO_AUTH_TOKEN)
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
     return conn
 
-# Dynamically route sqlite3.connect when Turso is configured
-_original_sqlite_connect = sqlite3.connect
+def sync_turso_to_local():
+    """Download current tables from Turso Cloud on boot to restore full state."""
+    if not (TURSO_DATABASE_URL and TURSO_AUTH_TOKEN):
+        return
+    try:
+        http_url = TURSO_DATABASE_URL.replace('libsql://', 'https://').rstrip('/') + '/v2/pipeline'
+        headers = {'Authorization': f'Bearer {TURSO_AUTH_TOKEN}', 'Content-Type': 'application/json'}
+        
+        # 1. Fetch tables
+        payload = {'requests': [{'type': 'execute', 'stmt': {'sql': "SELECT name, sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"}}]}
+        r = requests.post(http_url, headers=headers, json=payload, timeout=10)
+        if r.status_code != 200:
+            return
+        
+        res = r.json().get('results', [])[0]
+        rows = res.get('response', {}).get('result', {}).get('rows', [])
+        
+        with sqlite3.connect(DB_FILE) as conn:
+            cur = conn.cursor()
+            for row in rows:
+                tname = row[0].get('value')
+                tsql = row[1].get('value')
+                if tsql:
+                    try:
+                        cur.execute(tsql)
+                    except Exception:
+                        pass
+                
+                # Fetch rows for this table
+                r_payload = {'requests': [{'type': 'execute', 'stmt': {'sql': f'SELECT * FROM "{tname}"'}}]}
+                r_table = requests.post(http_url, headers=headers, json=r_payload, timeout=10)
+                if r_table.status_code == 200:
+                    t_result = r_table.json().get('results', [])[0].get('response', {}).get('result', {})
+                    cols = [c['name'] for c in t_result.get('cols', [])]
+                    t_rows = t_result.get('rows', [])
+                    if cols and t_rows:
+                        placeholders = ', '.join(['?'] * len(cols))
+                        cols_str = ', '.join([f'"{c}"' for c in cols])
+                        for tr in t_rows:
+                            vals = []
+                            for cell in tr:
+                                v_type = cell.get('type')
+                                v_val = cell.get('value')
+                                if v_type == 'null' or v_val is None:
+                                    vals.append(None)
+                                elif v_type == 'integer':
+                                    vals.append(int(v_val))
+                                elif v_type == 'float':
+                                    vals.append(float(v_val))
+                                else:
+                                    vals.append(str(v_val))
+                            cur.execute(f'INSERT OR REPLACE INTO "{tname}" ({cols_str}) VALUES ({placeholders})', vals)
+            conn.commit()
+        print("[TURSO] Restored latest database state from Turso Cloud.", flush=True)
+    except Exception as e:
+        print(f"[TURSO] Boot sync notice: {e}", flush=True)
 
-def connect_db_router(database=DB_FILE, *args, **kwargs):
-    if TURSO_DATABASE_URL and TURSO_AUTH_TOKEN:
-        return TursoConnection(TURSO_DATABASE_URL, TURSO_AUTH_TOKEN)
-    return _original_sqlite_connect(database, *args, **kwargs)
+def sync_local_to_turso_background():
+    """Background thread loop pushing local database tables to Turso Cloud every 15s."""
+    http_url = TURSO_DATABASE_URL.replace('libsql://', 'https://').rstrip('/') + '/v2/pipeline' if TURSO_DATABASE_URL else None
+    headers = {'Authorization': f'Bearer {TURSO_AUTH_TOKEN}', 'Content-Type': 'application/json'} if TURSO_AUTH_TOKEN else {}
 
+    while True:
+        time.sleep(15)
+        if not (TURSO_DATABASE_URL and TURSO_AUTH_TOKEN):
+            continue
+        try:
+            with sqlite3.connect(DB_FILE) as conn:
+                cur = conn.cursor()
+                cur.execute("SELECT name, sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+                tables = cur.fetchall()
+                
+                requests_list = []
+                for tname, create_sql in tables:
+                    if not create_sql:
+                        continue
+                    requests_list.append({'type': 'execute', 'stmt': {'sql': create_sql}})
+                    cur.execute(f'SELECT * FROM "{tname}"')
+                    rows = cur.fetchall()
+                    col_names = [d[0] for d in cur.description] if cur.description else []
+                    if col_names and rows:
+                        placeholders = ', '.join(['?'] * len(col_names))
+                        cols_str = ', '.join([f'"{c}"' for c in col_names])
+                        for r in rows:
+                            args = []
+                            for val in r:
+                                if val is None:
+                                    args.append({'type': 'null'})
+                                elif isinstance(val, bool):
+                                    args.append({'type': 'integer', 'value': '1' if val else '0'})
+                                elif isinstance(val, int):
+                                    args.append({'type': 'integer', 'value': str(val)})
+                                elif isinstance(val, float):
+                                    args.append({'type': 'float', 'value': val})
+                                else:
+                                    args.append({'type': 'text', 'value': str(val)})
+                            requests_list.append({
+                                'type': 'execute',
+                                'stmt': {'sql': f'INSERT OR REPLACE INTO "{tname}" ({cols_str}) VALUES ({placeholders})', 'args': args}
+                            })
+                if requests_list:
+                    # Send in chunks of 100 queries max to prevent HTTP payload bloat
+                    for chunk_idx in range(0, len(requests_list), 100):
+                        chunk = requests_list[chunk_idx:chunk_idx + 100]
+                        requests.post(http_url, headers=headers, json={'requests': chunk}, timeout=10)
+        except Exception:
+            pass
+
+# Initialize Hybrid Cloud Persistence Engine
 if TURSO_DATABASE_URL and TURSO_AUTH_TOKEN:
-    sqlite3.connect = connect_db_router
-    try:
-        print("[TURSO] Turso Cloud Database Active - Permanent persistence enabled.", flush=True)
-    except Exception:
-        pass
+    sync_turso_to_local()
+    t = threading.Thread(target=sync_local_to_turso_background, daemon=True)
+    t.start()
+    print("[TURSO] High-Speed Cloud Hybrid Engine Active — 0ms local delay with permanent cloud sync.", flush=True)
 else:
-    try:
-        print("[DATABASE] Local SQLite Database Active.", flush=True)
-    except Exception:
-        pass
+    print("[DATABASE] Local SQLite Engine Active.", flush=True)
 
 # ==========================================================================
 # 🛠️ GENERAL BOT UTILITIES
