@@ -89,12 +89,12 @@ def sync_turso_to_local():
         print(f"[TURSO] Boot sync notice: {e}", flush=True)
 
 def sync_local_to_turso_background():
-    """Background thread loop pushing local database tables to Turso Cloud every 15s."""
+    """Background thread loop pushing local database tables to Turso Cloud every 5 minutes."""
     http_url = TURSO_DATABASE_URL.replace('libsql://', 'https://').rstrip('/') + '/v2/pipeline' if TURSO_DATABASE_URL else None
     headers = {'Authorization': f'Bearer {TURSO_AUTH_TOKEN}', 'Content-Type': 'application/json'} if TURSO_AUTH_TOKEN else {}
 
     while True:
-        time.sleep(15)
+        time.sleep(300)
         if not (TURSO_DATABASE_URL and TURSO_AUTH_TOKEN):
             continue
         try:
@@ -132,10 +132,8 @@ def sync_local_to_turso_background():
                                 'stmt': {'sql': f'INSERT OR REPLACE INTO "{tname}" ({cols_str}) VALUES ({placeholders})', 'args': args}
                             })
                 if requests_list:
-                    # Send in chunks of 100 queries max to prevent HTTP payload bloat
-                    for chunk_idx in range(0, len(requests_list), 100):
-                        chunk = requests_list[chunk_idx:chunk_idx + 100]
-                        requests.post(http_url, headers=headers, json={'requests': chunk}, timeout=10)
+                    # Single batched HTTP POST request to prevent CPU saturation
+                    requests.post(http_url, headers=headers, json={'requests': requests_list[:200]}, timeout=15)
         except Exception:
             pass
 
