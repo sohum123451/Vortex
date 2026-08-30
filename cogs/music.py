@@ -12,7 +12,7 @@ import os
 # yt-dlp configuration with mobile/embedded client rotation & cookie support
 cookies_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "cookies.txt")
 ytdl_format_options = {
-    'format': 'bestaudio/best',
+    'format': 'bestaudio[ext=m4a]/bestaudio/best',
     'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
     'restrictfilenames': True,
     'noplaylist': True,
@@ -25,8 +25,8 @@ ytdl_format_options = {
     'source_address': '0.0.0.0',
     'extractor_args': {
         'youtube': {
-            'player_client': ['android', 'ios', 'web_embedded', 'mweb'],
-            'player_skip': ['webpage', 'configs'],
+            'player_client': ['ios', 'android', 'mweb', 'web'],
+            'player_skip': ['configs'],
         }
     },
     'http_headers': {
@@ -39,10 +39,16 @@ ytdl_format_options = {
 if os.path.exists(cookies_file):
     ytdl_format_options['cookiefile'] = cookies_file
 
-ffmpeg_options = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-    'options': '-vn -loglevel panic -ar 48000 -ac 2',
-}
+def make_ffmpeg_audio(url_or_path, http_headers=None):
+    import shutil
+    before = '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'
+    if http_headers:
+        h_str = "".join([f"{k}: {v}\r\n" for k, v in http_headers.items()])
+        before += f' -headers "{h_str}"'
+    
+    opts = {'before_options': before, 'options': '-vn -loglevel panic -ar 48000 -ac 2'}
+    executable = shutil.which('ffmpeg') or 'ffmpeg'
+    return discord.FFmpegPCMAudio(url_or_path, executable=executable, **opts)
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 ytdl_sc = youtube_dl.YoutubeDL({**ytdl_format_options, 'default_search': 'scsearch'})
@@ -83,39 +89,44 @@ class YTDLSource(discord.PCMVolumeTransformer):
     async def from_query(cls, query, *, loop=None, stream=True):
         loop = loop or asyncio.get_event_loop()
         
-        # 1. First attempt: Standard extractor with Android/iOS player clients
+        # 1. First attempt: Standard YouTube extractor
         try:
             to_run = functools.partial(ytdl.extract_info, query, download=not stream)
             data = await loop.run_in_executor(None, to_run)
+            if data and 'entries' in data:
+                if not data['entries']:
+                    raise Exception("No YouTube results.")
+                data = data['entries'][0]
+            if not data or not data.get('url'):
+                raise Exception("Missing audio URL from YouTube.")
         except Exception as yt_err:
-            # 2. Fallback attempt: If YouTube datacenter bot challenge triggers, fallback to SoundCloud search
+            # 2. Fallback attempt: SoundCloud search fallback
             clean_query = query
             if "youtube.com" in query or "youtu.be" in query:
-                # If it's a blocked YouTube URL, extract title or query fallback
                 clean_query = re.sub(r'https?://[^\s]+', '', query).strip() or query
             
             sc_query = f"scsearch:{clean_query}" if not clean_query.startswith("scsearch:") else clean_query
             try:
                 to_run_sc = functools.partial(ytdl_sc.extract_info, sc_query, download=not stream)
                 data = await loop.run_in_executor(None, to_run_sc)
+                if data and 'entries' in data:
+                    if not data['entries']:
+                        raise Exception("No SoundCloud results.")
+                    data = data['entries'][0]
             except Exception:
                 raise yt_err
 
         if not data:
             raise Exception("No search results found.")
 
-        if 'entries' in data:
-            if not data['entries']:
-                raise Exception("No playable audio tracks found.")
-            data = data['entries'][0]
-
         filename = data['url'] if stream else ytdl.prepare_filename(data)
-        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
+        headers = data.get('http_headers')
+        return cls(make_ffmpeg_audio(filename, headers), data=data)
 
     @classmethod
     def from_url(cls, url, title, duration=0):
         data = {'title': title, 'url': url, 'webpage_url': url, 'duration': duration, 'thumbnail': '', 'uploader': 'Web Radio'}
-        return cls(discord.FFmpegPCMAudio(url, **ffmpeg_options), data=data)
+        return cls(make_ffmpeg_audio(url), data=data)
 
 class MusicPlayerState:
     def __init__(self, guild_id):
