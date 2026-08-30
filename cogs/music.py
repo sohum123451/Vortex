@@ -41,7 +41,7 @@ if os.path.exists(cookies_file):
 
 ffmpeg_options = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-    'options': '-vn',
+    'options': '-vn -loglevel panic -ar 48000 -ac 2',
 }
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
