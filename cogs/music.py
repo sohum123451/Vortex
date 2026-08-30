@@ -55,12 +55,12 @@ ytdl_sc = youtube_dl.YoutubeDL({**ytdl_format_options, 'default_search': 'scsear
 
 RADIO_STREAMS = {
     "lofi": ("https://stream.zeno.fm/f3wvbbqmdg8uv", "Lofi Hip Hop Chill Beats ☕", 0.6),
-    "synthwave": ("https://stream.zeno.fm/7cvs80ydg8uv", "Synthwave / Cyberpunk 80s 🌌", 0.8),
-    "anime": ("https://stream.zeno.fm/7k935mub11zuv", "Anime OST & J-Pop Hits 🌸", 0.8),
+    "synthwave": ("https://stream.nightride.fm/nightride.mp3", "Synthwave / Cyberpunk 80s 🌌", 0.8),
+    "anime": ("https://listen.moe/stream", "Anime OST & J-Pop Hits 🌸", 0.8),
     "chill": ("https://stream.zeno.fm/0r0xa792kwzuv", "Chillout Lounge & Ambient 🍃", 0.7),
-    "jazz": ("https://stream.zeno.fm/0k296dvdg8uv", "Smooth Coffee Jazz 🎷", 0.7),
-    "classical": ("https://stream.zeno.fm/e2vvbbqmdg8uv", "Peaceful Classical Piano 🎹", 0.7),
-    "gaming": ("https://stream.zeno.fm/65q750ydg8uv", "Epic Gaming Bass & Electro 🎮", 0.6),
+    "jazz": ("https://stream.somafm.com/sonicuniverse-128-mp3", "Smooth Coffee Jazz 🎷", 0.7),
+    "classical": ("https://stream.srg-ssr.ch/m/rsc_de/mp3_128", "Peaceful Classical Piano & Orchestra 🎹", 0.7),
+    "gaming": ("https://ice1.somafm.com/u80s-128-mp3", "Epic Gaming Bass & Electro 🎮", 0.7),
 }
 
 def format_duration(duration):
