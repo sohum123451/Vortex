@@ -42,10 +42,6 @@ if os.path.exists(cookies_file):
 def make_ffmpeg_audio(url_or_path, http_headers=None):
     import shutil
     before = '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'
-    if http_headers:
-        h_str = "".join([f"{k}: {v}\r\n" for k, v in http_headers.items()])
-        before += f' -headers "{h_str}"'
-    
     opts = {'before_options': before, 'options': '-vn -loglevel panic -ar 48000 -ac 2'}
     executable = shutil.which('ffmpeg') or 'ffmpeg'
     return discord.FFmpegPCMAudio(url_or_path, executable=executable, **opts)
