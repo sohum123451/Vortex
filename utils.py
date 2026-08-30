@@ -27,9 +27,22 @@ TURSO_DATABASE_URL = os.getenv("TURSO_DATABASE_URL")
 TURSO_AUTH_TOKEN = os.getenv("TURSO_AUTH_TOKEN")
 
 def get_db():
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(DB_FILE, timeout=10.0)
+    try:
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout=5000;")
+    except Exception:
+        pass
     conn.row_factory = sqlite3.Row
     return conn
+
+# Enable WAL mode globally on startup
+try:
+    with sqlite3.connect(DB_FILE, timeout=10.0) as _init_conn:
+        _init_conn.execute("PRAGMA journal_mode=WAL;")
+        _init_conn.execute("PRAGMA busy_timeout=5000;")
+except Exception:
+    pass
 
 def sync_turso_to_local():
     """Download current tables from Turso Cloud on boot to restore full state."""
@@ -48,7 +61,7 @@ def sync_turso_to_local():
         res = r.json().get('results', [])[0]
         rows = res.get('response', {}).get('result', {}).get('rows', [])
         
-        with sqlite3.connect(DB_FILE) as conn:
+        with sqlite3.connect(DB_FILE, timeout=10.0) as conn:
             cur = conn.cursor()
             for row in rows:
                 tname = row[0].get('value')
@@ -98,7 +111,7 @@ def sync_local_to_turso_background():
         if not (TURSO_DATABASE_URL and TURSO_AUTH_TOKEN):
             continue
         try:
-            with sqlite3.connect(DB_FILE) as conn:
+            with sqlite3.connect(DB_FILE, timeout=10.0) as conn:
                 cur = conn.cursor()
                 cur.execute("SELECT name, sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
                 tables = cur.fetchall()
@@ -137,14 +150,13 @@ def sync_local_to_turso_background():
         except Exception:
             pass
 
-# Initialize Hybrid Cloud Persistence Engine
+# Initialize Hybrid Cloud Persistence Engine in background threads
 if TURSO_DATABASE_URL and TURSO_AUTH_TOKEN:
-    sync_turso_to_local()
-    t = threading.Thread(target=sync_local_to_turso_background, daemon=True)
-    t.start()
-    print("[TURSO] High-Speed Cloud Hybrid Engine Active — 0ms local delay with permanent cloud sync.", flush=True)
+    threading.Thread(target=sync_turso_to_local, daemon=True).start()
+    threading.Thread(target=sync_local_to_turso_background, daemon=True).start()
+    print("[TURSO] High-Speed Cloud Hybrid Engine Active — 0ms local delay with WAL mode.", flush=True)
 else:
-    print("[DATABASE] Local SQLite Engine Active.", flush=True)
+    print("[DATABASE] Local SQLite Engine Active (WAL mode).", flush=True)
 
 # ==========================================================================
 # 🛠️ GENERAL BOT UTILITIES
