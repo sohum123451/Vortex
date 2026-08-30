@@ -56,7 +56,7 @@ RADIO_STREAMS = {
     "chill": ("https://stream.zeno.fm/0r0xa792kwzuv", "Chillout Lounge & Ambient 🍃", 0.7),
     "jazz": ("https://stream.somafm.com/sonicuniverse-128-mp3", "Smooth Coffee Jazz 🎷", 0.7),
     "classical": ("https://stream.srg-ssr.ch/m/rsc_de/mp3_128", "Peaceful Classical Piano & Orchestra 🎹", 0.7),
-    "gaming": ("https://ice1.somafm.com/u80s-128-mp3", "Epic Gaming Bass & Electro 🎮", 0.7),
+    "gaming": ("https://stream.somafm.com/groovesalad-256-mp3", "Epic 256kbps HD Gaming & Electro 🎮", 0.7),
 }
 
 def format_duration(duration):
@@ -71,7 +71,7 @@ def format_duration(duration):
         return "Stream"
 
 class YTDLSource(discord.PCMVolumeTransformer):
-    def __init__(self, source, *, data, volume=0.5):
+    def __init__(self, source, *, data, volume=0.8):
         super().__init__(source, volume)
         self.data = data
         self.title = data.get('title', 'Unknown Title')
@@ -85,9 +85,14 @@ class YTDLSource(discord.PCMVolumeTransformer):
     async def from_query(cls, query, *, loop=None, stream=True):
         loop = loop or asyncio.get_event_loop()
         
+        if not query.startswith(("http://", "https://", "ytsearch:", "scsearch:", "ytsearch1:")):
+            search_query = f"ytsearch1:{query}"
+        else:
+            search_query = query
+
         # 1. First attempt: Standard YouTube extractor
         try:
-            to_run = functools.partial(ytdl.extract_info, query, download=not stream)
+            to_run = functools.partial(ytdl.extract_info, search_query, download=not stream)
             data = await loop.run_in_executor(None, to_run)
             if data and 'entries' in data:
                 if not data['entries']:
