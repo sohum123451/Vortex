@@ -5,6 +5,7 @@ import requests
 import sqlite3
 import threading
 import time
+import asyncio
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 import discord
@@ -234,9 +235,14 @@ def role_guard(ctx, member: discord.Member):
     return None
 
 # ==========================================================================
-# 🧠 SHARED GEMINI AI GENERATION ENGINE
+# 🧠 ZERO-COST HIGH-CONCURRENCY AI SCALING ENGINE (1000+ USERS)
 # ==========================================================================
 _gemini_client = None
+_groq_client = None
+_ai_semaphore = asyncio.Semaphore(10)  # Max 10 concurrent outbound LLM requests
+_ai_cache = {}  # prompt_hash -> (response_text, timestamp)
+CACHE_TTL_SECONDS = 600  # 10 minutes TTL
+MAX_CACHE_SIZE = 1000
 
 def get_gemini():
     global _gemini_client
@@ -250,22 +256,85 @@ def get_gemini():
                 pass
     return _gemini_client
 
-async def generate_ai(prompt: str, system_instruction: str = None) -> str:
-    """Universal high-speed text generator with model fallbacks."""
-    client = get_gemini()
-    if not client:
-        raise Exception("Gemini API key is not configured.")
+def get_groq():
+    global _groq_client
+    if _groq_client is None:
+        key = os.getenv("GROQ_API_KEY", "")
+        if key:
+            try:
+                from groq import AsyncGroq
+                _groq_client = AsyncGroq(api_key=key)
+            except Exception:
+                pass
+    return _groq_client
 
-    contents = f"{system_instruction}\n\n{prompt}" if system_instruction else prompt
-    for model_name in ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash"]:
-        try:
-            res = await client.models.generate_content(
-                model=model_name,
-                contents=contents,
-            )
-            if res and res.text:
-                return res.text.strip()
-        except Exception:
-            continue
-    raise Exception("AI generation failed across all available Gemini models.")
+def _clean_cache():
+    """Prune expired items from memory cache."""
+    now = time.time()
+    expired = [k for k, v in _ai_cache.items() if now - v[1] > CACHE_TTL_SECONDS]
+    for k in expired:
+        _ai_cache.pop(k, None)
+    if len(_ai_cache) > MAX_CACHE_SIZE:
+        oldest = sorted(_ai_cache.items(), key=lambda x: x[1][1])[:200]
+        for k, _ in oldest:
+            _ai_cache.pop(k, None)
+
+async def generate_ai(prompt: str, system_instruction: str = None, use_cache: bool = True) -> str:
+    """Universal high-speed text generator with LRU caching and multi-provider failover pool."""
+    cache_key = f"{system_instruction or ''}:::{prompt.strip()}"
+    now = time.time()
+
+    # 1. LRU Cache Hit (0ms latency & 0 API cost)
+    if use_cache and cache_key in _ai_cache:
+        cached_val, cached_time = _ai_cache[cache_key]
+        if now - cached_time < CACHE_TTL_SECONDS:
+            return cached_val
+
+    _clean_cache()
+
+    async with _ai_semaphore:
+        # Tier 1: Gemini Free Provider Pool
+        gemini = get_gemini()
+        if gemini:
+            contents = f"{system_instruction}\n\n{prompt}" if system_instruction else prompt
+            for model_name in ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash"]:
+                try:
+                    res = await gemini.models.generate_content(
+                        model=model_name,
+                        contents=contents,
+                    )
+                    if res and res.text:
+                        text = res.text.strip()
+                        if use_cache:
+                            _ai_cache[cache_key] = (text, now)
+                        return text
+                except Exception:
+                    continue
+
+        # Tier 2: Groq High-Speed Free Provider Pool (500 tokens/sec failover)
+        groq = get_groq()
+        if groq:
+            messages = []
+            if system_instruction:
+                messages.append({"role": "system", "content": system_instruction})
+            messages.append({"role": "user", "content": prompt})
+
+            for groq_model in ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"]:
+                try:
+                    completion = await groq.chat.completions.create(
+                        model=groq_model,
+                        messages=messages,
+                        temperature=0.7,
+                        max_tokens=1500,
+                    )
+                    if completion.choices and completion.choices[0].message.content:
+                        text = completion.choices[0].message.content.strip()
+                        if use_cache:
+                            _ai_cache[cache_key] = (text, now)
+                        return text
+                except Exception:
+                    continue
+
+    raise Exception("AI generation failed across all available Gemini & Groq cloud providers.")
+
 
