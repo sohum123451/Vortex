@@ -73,7 +73,19 @@ class AIAgent(commands.Cog):
         if not await self.is_bot_admin(ctx.author):
             return await ctx.reply("🔒 **Restricted:** The `&patch` code modifier is exclusive to the Bot Creator / Team.")
 
-        msg = await ctx.reply("🔍 **AI Code Agent:** Analyzing repository structure and prompt...")
+        start_time = datetime.now()
+        
+        # Step 1: Analysis & Routing
+        step_text = (
+            "⚙️ **Autonomous AI Code Agent**\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "🟡 `[Step 1/5]` **Analyzing Repository** — Scanning cogs & locating target file...\n"
+            "⚪ `[Step 2/5]` Synthesizing code with Gemini AI\n"
+            "⚪ `[Step 3/5]` Creating safety backup & AST syntax check\n"
+            "⚪ `[Step 4/5]` Applying patch & live hot-reloading\n"
+            "⚪ `[Step 5/5]` Complete"
+        )
+        msg = await ctx.reply(step_text)
 
         base_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
         cogs_dir = os.path.join(base_dir, "cogs")
@@ -101,7 +113,6 @@ Respond with JSON only:
                 routing_prompt,
                 system_instruction="You are an autonomous senior Python architect. Output strictly JSON without markdown."
             )
-            # Parse JSON
             clean_json = self._clean_code_fence(route_res)
             import json
             route_data = json.loads(clean_json)
@@ -122,7 +133,17 @@ Respond with JSON only:
             with open(target_abs, "r", encoding="utf-8") as f:
                 original_code = f.read()
 
-        await msg.edit(content=f"🧠 **AI Code Agent:** Generating patch for `{rel_path}` with Gemini 3.6...")
+        # Step 2: Code Generation
+        step_text = (
+            "⚙️ **Autonomous AI Code Agent**\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"🟢 `[Step 1/5]` Target: `{rel_path}`\n"
+            f"🟡 `[Step 2/5]` **Synthesizing Code** — Writing Discord.py async patch with Gemini 3.6 Flash...\n"
+            "⚪ `[Step 3/5]` Creating safety backup & AST syntax check\n"
+            "⚪ `[Step 4/5]` Applying patch & live hot-reloading\n"
+            "⚪ `[Step 5/5]` Complete"
+        )
+        await msg.edit(content=step_text)
 
         system_prompt = """You are an expert Discord.py v2+ bot engineer.
 Rules:
@@ -151,24 +172,44 @@ Return the complete updated file content in ```python ... ```:"""
         except Exception as e:
             return await msg.edit(content=f"❌ **AI Generation Error:** {e}")
 
-        # Backup existing file
+        # Step 3: Safety Backup & Syntax Validation
+        step_text = (
+            "⚙️ **Autonomous AI Code Agent**\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"🟢 `[Step 1/5]` Target: `{rel_path}`\n"
+            f"🟢 `[Step 2/5]` Code synthesized ({len(new_code.splitlines())} lines)\n"
+            f"🟡 `[Step 3/5]` **Safety Verification** — Creating backup & compiling AST syntax...\n"
+            "⚪ `[Step 4/5]` Applying patch & live hot-reloading\n"
+            "⚪ `[Step 5/5]` Complete"
+        )
+        await msg.edit(content=step_text)
+
         if os.path.exists(target_abs):
             bak_path = f"{target_abs}.bak_{int(datetime.now().timestamp())}"
             shutil.copyfile(target_abs, bak_path)
             self.backup_history[target_abs] = bak_path
 
-        # Validate Python syntax before saving
         try:
             compile(new_code, target_abs, "exec")
         except SyntaxError as syn_err:
             return await msg.edit(content=f"❌ **Syntax Check Failed:**\n```py\n{syn_err}\nLine {syn_err.lineno}: {syn_err.text}\n```\nNo changes were applied.")
 
-        # Write to disk
+        # Step 4: Write & Hot Reload
+        step_text = (
+            "⚙️ **Autonomous AI Code Agent**\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"🟢 `[Step 1/5]` Target: `{rel_path}`\n"
+            f"🟢 `[Step 2/5]` Code synthesized ({len(new_code.splitlines())} lines)\n"
+            f"🟢 `[Step 3/5]` AST syntax verified & backup saved\n"
+            f"🟡 `[Step 4/5]` **Hot-Reloading** — Injecting module into live bot gateway...\n"
+            "⚪ `[Step 5/5]` Complete"
+        )
+        await msg.edit(content=step_text)
+
         os.makedirs(os.path.dirname(target_abs), exist_ok=True)
         with open(target_abs, "w", encoding="utf-8") as f:
             f.write(new_code)
 
-        # Hot-reload if it is a Cog
         reload_status = "Skipped (Not a Cog)"
         if "cogs" in rel_path and rel_path.endswith(".py"):
             mod_name = f"cogs.{os.path.basename(rel_path)[:-3]}"
@@ -180,7 +221,6 @@ Return the complete updated file content in ```python ... ```:"""
                     await self.bot.load_extension(mod_name)
                     reload_status = f"✅ Loaded new extension `{mod_name}`"
             except Exception as reload_err:
-                # Rollback on reload failure
                 if target_abs in self.backup_history and os.path.exists(self.backup_history[target_abs]):
                     shutil.copyfile(self.backup_history[target_abs], target_abs)
                     try:
@@ -189,7 +229,6 @@ Return the complete updated file content in ```python ... ```:"""
                         pass
                 return await msg.edit(content=f"❌ **Cog Reload Error (Auto-Rolled Back):**\n```py\n{reload_err}\n```")
 
-        # Generate Diff preview
         diff = list(difflib.unified_diff(
             original_code.splitlines(),
             new_code.splitlines(),
@@ -201,9 +240,11 @@ Return the complete updated file content in ```python ... ```:"""
         if len(diff) > 25:
             diff_text += f"\n...({len(diff) - 25} more lines modified)"
 
+        elapsed = (datetime.now() - start_time).total_seconds()
+
         embed = discord.Embed(
             title="⚡ Code Patch Successfully Applied & Loaded!",
-            description=f"**Target File:** `{rel_path}`\n**Status:** {reload_status}",
+            description=f"**Target File:** `{rel_path}`\n**Status:** {reload_status}\n⏱️ **Execution Time:** `{elapsed:.2f}s`",
             color=SUCCESS_COLOR,
             timestamp=datetime.now(timezone.utc),
         )
@@ -260,12 +301,28 @@ Return the complete updated file content in ```python ... ```:"""
         if not (is_owner or is_admin):
             return await ctx.reply("🔒 **Permission Denied:** The `&do` dynamic action engine is reserved for Server Admins and the Bot Owner.")
 
-        msg = await ctx.reply("⚡ **Vortex Dynamic AI:** Formulating action plan...")
+        step_text = (
+            "⚡ **Vortex Dynamic AI Engine**\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "🟡 `[Step 1/3]` **Formulating Plan** — Analyzing guild context & intent...\n"
+            "⚪ `[Step 2/3]` Synthesizing Discord async workflow\n"
+            "⚪ `[Step 3/3]` Executing action"
+        )
+        msg = await ctx.reply(step_text)
 
         # Server context snapshot
         guild_info = f"Guild: {ctx.guild.name} (ID: {ctx.guild.id})" if ctx.guild else "Direct Message"
         roles_sample = [r.name for r in ctx.guild.roles[1:10]] if ctx.guild else []
         channels_sample = [c.name for c in ctx.guild.text_channels[:10]] if ctx.guild else []
+
+        step_text = (
+            "⚡ **Vortex Dynamic AI Engine**\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"🟢 `[Step 1/3]` Context analyzed ({len(channels_sample)} channels, {len(roles_sample)} roles)\n"
+            "🟡 `[Step 2/3]` **Synthesizing Flow** — Writing Discord async action with Gemini 3.6 Flash...\n"
+            "⚪ `[Step 3/3]` Executing action"
+        )
+        await msg.edit(content=step_text)
 
         system_instruction = f"""You are an autonomous Discord AI executor for discord.py 2.0+.
 Task: Convert the user's prompt into an async Python function `async def run(ctx, bot, db, discord, embed_color):` to execute the action.
@@ -328,6 +385,15 @@ Generate the `run` async function:"""
             ]
             if any(b in cleaned_code for b in blocked_keywords):
                 return await msg.edit(content="🛡️ **Security Sandbox Blocked:** Action contains unauthorized system-level calls.")
+
+        step_text = (
+            "⚡ **Vortex Dynamic AI Engine**\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"🟢 `[Step 1/3]` Context analyzed\n"
+            f"🟢 `[Step 2/3]` Action synthesized & verified\n"
+            "🟡 `[Step 3/3]` **Executing Action** — Running Discord operation..."
+        )
+        await msg.edit(content=step_text)
 
         stdout = io.StringIO()
         try:
