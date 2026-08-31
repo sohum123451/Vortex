@@ -63,6 +63,39 @@ class AIAgent(commands.Cog):
             pass
         return False
 
+    async def notify_owners(self, title: str, description: str, color: discord.Color = MAIN_COLOR, fields: list = None):
+        """Send detailed security and change notifications directly to bot owner DMs."""
+        embed = discord.Embed(
+            title=f"🛡️ Vortex Security & Evolution Alert: {title}",
+            description=description,
+            color=color,
+            timestamp=datetime.now(timezone.utc),
+        )
+        if fields:
+            for name, value, inline in fields:
+                embed.add_field(name=name, value=value[:1000], inline=inline)
+        embed.set_footer(text="Vortex Security & Real-Time Owner Audit Log")
+
+        owner_ids = set()
+        try:
+            app_info = await self.bot.application_info()
+            if app_info.team:
+                for member in app_info.team.members:
+                    owner_ids.add(member.id)
+            elif app_info.owner:
+                owner_ids.add(app_info.owner.id)
+        except Exception:
+            if getattr(self.bot, "owner_id", None):
+                owner_ids.add(self.bot.owner_id)
+
+        for oid in owner_ids:
+            try:
+                user = self.bot.get_user(oid) or await self.bot.fetch_user(oid)
+                if user:
+                    await user.send(embed=embed)
+            except Exception:
+                pass
+
     async def _send_error_card(self, msg, stage: str, error_title: str, error_detail: str, target_file: str = None, was_rolled_back: bool = False):
         embed = discord.Embed(
             title=f"🚨 Execution Error — {error_title}",
@@ -297,6 +330,14 @@ Return the complete updated file content in ```python ... ```:"""
         embed.set_footer(text=f"Vortex Autonomous Engine • Use &rollback to undo")
         await msg.edit(content=None, embed=embed)
 
+        # 📬 Notify Owner in DMs
+        await self.notify_owners(
+            "Code Patch Applied Live",
+            f"**Target File:** `{rel_path}`\n**Status:** {reload_status}\n**Invoker:** {ctx.author} (`{ctx.author.id}`)\n**Execution Time:** `{elapsed:.2f}s`",
+            SUCCESS_COLOR,
+            fields=[("Instruction", instruction[:400], False), ("Code Diff", f"```diff\n{diff_text[:800]}\n```" if diff_text else "No diff", False)]
+        )
+
     # =========================================================================
     # ⏪ 2. ROLLBACK COMMAND (&rollback)
     # =========================================================================
@@ -328,6 +369,11 @@ Return the complete updated file content in ```python ... ```:"""
                 if mod_name in self.bot.extensions:
                     await self.bot.reload_extension(mod_name)
             await ctx.reply(f"✅ Successfully rolled back `{rel_path}` to previous version.")
+            await self.notify_owners(
+                "Code Rollback Executed",
+                f"**Restored File:** `{rel_path}`\n**Triggered By:** {ctx.author} (`{ctx.author.id}`)",
+                WARN_COLOR
+            )
         except Exception as e:
             await ctx.reply(f"❌ Error during rollback: {e}")
 
@@ -403,6 +449,46 @@ Generate the `run` async function:"""
         except Exception as e:
             return await msg.edit(content=f"❌ **AI Synthesis Error:** {e}")
 
+        # 🛡️ STRICT ANTI-NUKE & ANTI-RAID DEFENSE INVARIANTS
+        anti_nuke_violations = []
+        lower_code = cleaned_code.lower()
+
+        # 1. Mass Channel Destruction Guard
+        if (".channels" in lower_code or "text_channels" in lower_code or "voice_channels" in lower_code) and ".delete(" in lower_code:
+            anti_nuke_violations.append("Mass Channel Deletion Loop detected")
+
+        # 2. Mass Role Destruction Guard
+        if ".roles" in lower_code and ".delete(" in lower_code:
+            anti_nuke_violations.append("Mass Role Deletion Loop detected")
+
+        # 3. Mass Member Ban/Kick Guard
+        if (".members" in lower_code) and (".ban(" in lower_code or ".kick(" in lower_code):
+            anti_nuke_violations.append("Mass Member Ban/Kick Loop detected")
+
+        # 4. Mass Mention Broadcast Spam Guard
+        if ("@everyone" in lower_code or "@here" in lower_code) and ("for " in lower_code or "while " in lower_code):
+            anti_nuke_violations.append("Mass Mention Broadcast Spam Loop detected")
+
+        # 5. Token & Secret Extraction Guard
+        if not is_owner:
+            blocked_keywords = [
+                "import os", "import sys", "import subprocess", "open(", "__import__",
+                "eval(", "exec(", "shutil", "token", "DISCORD_TOKEN", "getenv", "environ",
+                "globals()", "locals()", "getattr", "setattr", "delattr", "bot.http",
+                "bot._connection", "exit(", "quit("
+            ]
+            if any(b in cleaned_code for b in blocked_keywords):
+                anti_nuke_violations.append("Unauthorized System-Level Call / Environment Extraction")
+
+        if anti_nuke_violations:
+            violation_str = "\n• ".join(anti_nuke_violations)
+            await self.notify_owners(
+                "🚨 Anti-Nuke Security Defense Triggered",
+                f"**Guild:** {ctx.guild.name if ctx.guild else 'DM'} (`{getattr(ctx.guild, 'id', 'DM')}`)\n**User:** {ctx.author} (`{ctx.author.id}`)\n**Prompt:** *\"{action_prompt}\"*\n\n**Violations Intercepted & Blocked:**\n• {violation_str}",
+                color=ERROR_COLOR
+            )
+            return await msg.edit(content=f"🛡️ **Vortex Anti-Nuke Shield Active:** Action blocked to protect the server:\n• {violation_str}")
+
         # Setup sandbox environment
         env = {
             "ctx": ctx,
@@ -417,17 +503,6 @@ Generate the `run` async function:"""
             "ERROR_COLOR": ERROR_COLOR,
             "MAIN_COLOR": MAIN_COLOR,
         }
-
-        # Block dangerous builtins and sensitive bot internals for non-owner
-        if not is_owner:
-            blocked_keywords = [
-                "import os", "import sys", "import subprocess", "open(", "__import__",
-                "eval(", "exec(", "shutil", "token", "DISCORD_TOKEN", "getenv", "environ",
-                "globals()", "locals()", "getattr", "setattr", "delattr", "bot.http",
-                "bot._connection", "exit(", "quit("
-            ]
-            if any(b in cleaned_code for b in blocked_keywords):
-                return await msg.edit(content="🛡️ **Security Sandbox Blocked:** Action contains unauthorized system-level calls.")
 
         step_text = (
             "⚡ **Vortex Dynamic AI Engine**\n"
@@ -833,6 +908,13 @@ Output the updated file content:"""
         final_embed.add_field(name="🛡️ Integrity Status", value="✅ **Zero-Degradation Certified:** All existing bot commands and data remain intact.", inline=False)
         final_embed.set_footer(text="Vortex Self-Evolution Engine • Render Cloud Continuous Deployment")
         await msg.edit(content=None, embed=final_embed)
+
+        # 📬 Notify Owner in DMs
+        await self.notify_owners(
+            "Autonomous Bot Upgrade Deployed",
+            f"**Upgrade Focus:** `{target_prompt[:150]}`\n**Target Module:** `{rel_path}`\n**Execution Time:** `{elapsed:.2f}s`\n**Git Status:** {git_status}",
+            SUCCESS_COLOR
+        )
 
     @commands.command(name="evolution_history", aliases=["evolution_changelog", "changelog_ai"], description="[Owner] View past autonomous bot upgrades and changelogs")
     async def evolution_history(self, ctx):
