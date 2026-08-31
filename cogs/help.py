@@ -265,7 +265,7 @@ def help_games_embed() -> discord.Embed:
             "• `&meme` — Trending Reddit meme\n"
             "• `&eightball <question>` — Classic 8-Ball oracle\n"
             "• `&ship <user1> [user2]` — Love compatibility meter (%)\n"
-            "• `&joke` / `&dadjoke` / `&fact`\n"
+            "• `&joke` / `&dadjoke` / `&fact` / `&insult [@user]` / `&compliment [@user]`\n"
             "• `&choose <opt1, opt2...>` — Random decision maker\n"
             "• `&howgay [@user]` / `&simp [@user]` / `&chad [@user]`\n"
             "• `&roll [sides]` / `&coinflip` / `&reverse <text>` / `&emojify <text>` / `&clap <text>`"
