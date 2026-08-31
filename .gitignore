@@ -1,7 +1,8 @@
 .env
 *.pem
 *.key
-*.db
+*.db*
+*.bak*
 __pycache__/
 *.pyc
 .venv/

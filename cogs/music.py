@@ -1,30 +1,38 @@
 import asyncio
 import functools
+import os
 import re
+import shutil
 import urllib.parse
+from datetime import datetime, timezone
 import discord
 from discord.ext import commands
 import yt_dlp as youtube_dl
 from utils import MAIN_COLOR, SUCCESS_COLOR, WARN_COLOR, ERROR_COLOR, INFO_COLOR
 
-import os
-
-# yt-dlp configuration with mobile/embedded client rotation & cookie support
+# yt-dlp configuration with multi-client rotation & cookie support
 cookies_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "cookies.txt")
 ytdl_format_options = {
-    'format': 'bestaudio[ext=m4a]/bestaudio/best',
+    'format': 'bestaudio/best',
     'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
     'restrictfilenames': True,
     'noplaylist': True,
     'nocheckcertificate': True,
-    'ignoreerrors': False,
+    'ignoreerrors': True,
     'logtostderr': False,
     'quiet': True,
     'no_warnings': True,
-    'socket_timeout': 5,
+    'default_search': 'auto',
     'source_address': '0.0.0.0',
+    'socket_timeout': 10,
+    'extractor_args': {
+        'youtube': {
+            'player_client': ['android', 'ios', 'web_embedded', 'mweb'],
+            'skip': ['dash', 'hls']
+        }
+    },
     'http_headers': {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
     }
@@ -38,10 +46,9 @@ def make_ffmpeg_audio(url_or_path, http_headers=None):
         import imageio_ffmpeg
         executable = imageio_ffmpeg.get_ffmpeg_exe()
     except Exception:
-        import shutil
         executable = shutil.which('ffmpeg') or 'ffmpeg'
 
-    before = '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'
+    before = '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -probesize 32M'
     opts = {'before_options': before, 'options': '-vn -loglevel panic -ar 48000 -ac 2'}
     return discord.FFmpegPCMAudio(url_or_path, executable=executable, **opts)
 
@@ -60,36 +67,38 @@ RADIO_STREAMS = {
 
 def format_duration(duration):
     if not duration:
-        return "Stream"
+        return "Live Stream"
     try:
         total_seconds = int(float(duration))
         minutes = total_seconds // 60
         seconds = total_seconds % 60
+        hours = minutes // 60
+        minutes = minutes % 60
+        if hours:
+            return f"{hours}:{minutes:02d}:{seconds:02d}"
         return f"{minutes}:{seconds:02d}"
     except Exception:
-        return "Stream"
+        return "Live Stream"
 
 class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source, *, data, volume=1.0):
         super().__init__(source, volume)
         self.data = data
-        self.title = data.get('title', 'Unknown Title')
+        self.title = data.get('title', 'Unknown Track')
         self.url = data.get('url', '')
         self.webpage_url = data.get('webpage_url', '')
         self.duration = data.get('duration', 0)
         self.thumbnail = data.get('thumbnail', '')
-        self.uploader = data.get('uploader', 'Unknown Artist')
+        self.uploader = data.get('uploader', data.get('artist', 'Unknown Artist'))
 
     @classmethod
-    async def from_query(cls, query, *, loop=None, stream=True):
+    async def from_query(cls, query: str, *, loop=None, stream=True):
         loop = loop or asyncio.get_event_loop()
-        
         is_direct_url = query.startswith(("http://", "https://"))
-
         data = None
 
         if is_direct_url:
-            # 1. Direct URL: Try YouTube first
+            # 1. Direct URL extraction
             try:
                 to_run = functools.partial(ytdl.extract_info, query, download=not stream)
                 data = await loop.run_in_executor(None, to_run)
@@ -99,11 +108,11 @@ class YTDLSource(discord.PCMVolumeTransformer):
                 pass
 
         if not data or not data.get('url'):
-            # 2. Search query or URL fallback: Use SoundCloud (fastest on datacenter IPs)
+            # 2. Search query fallback: Try SoundCloud first (unblocked on cloud datacenters)
             clean_query = query
             if is_direct_url:
                 clean_query = re.sub(r'https?://[^\s]+', '', query).strip() or "trending music"
-            
+
             sc_query = f"scsearch1:{clean_query}" if not clean_query.startswith("scsearch1:") else clean_query
             try:
                 to_run_sc = functools.partial(ytdl_sc.extract_info, sc_query, download=not stream)
@@ -114,7 +123,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
                 pass
 
         if not data or not data.get('url'):
-            # 3. Final fallback: YouTube Search
+            # 3. Search query fallback: Try YouTube
             yt_query = f"ytsearch1:{query}"
             try:
                 to_run_yt = functools.partial(ytdl.extract_info, yt_query, download=not stream)
@@ -122,22 +131,22 @@ class YTDLSource(discord.PCMVolumeTransformer):
                 if data and 'entries' in data and data['entries']:
                     data = data['entries'][0]
             except Exception as final_err:
-                raise Exception(f"Unable to load audio track: {final_err}")
+                raise Exception(f"Unable to extract audio track: {final_err}")
 
         if not data or not data.get('url'):
-            raise Exception("No playable audio tracks found.")
+            raise Exception("No playable audio streams found for this query.")
 
         filename = data['url'] if stream else ytdl.prepare_filename(data)
         headers = data.get('http_headers')
         return cls(make_ffmpeg_audio(filename, headers), data=data)
 
     @classmethod
-    def from_url(cls, url, title, duration=0):
-        data = {'title': title, 'url': url, 'webpage_url': url, 'duration': duration, 'thumbnail': '', 'uploader': 'Web Radio'}
+    def from_url(cls, url: str, title: str, duration=0):
+        data = {'title': title, 'url': url, 'webpage_url': url, 'duration': duration, 'thumbnail': '', 'uploader': '24/7 Web Radio'}
         return cls(make_ffmpeg_audio(url), data=data)
 
 class MusicPlayerState:
-    def __init__(self, guild_id):
+    def __init__(self, guild_id: int):
         self.guild_id = guild_id
         self.queue = []
         self.current = None
@@ -148,7 +157,7 @@ class MusicPlayerState:
 
 class MusicControls(discord.ui.View):
     def __init__(self, cog, ctx):
-        super().__init__(timeout=180)
+        super().__init__(timeout=300)
         self.cog = cog
         self.ctx = ctx
 
@@ -156,23 +165,23 @@ class MusicControls(discord.ui.View):
     async def toggle_play(self, interaction: discord.Interaction, button: discord.ui.Button):
         vc = interaction.guild.voice_client
         if not vc:
-            return await interaction.response.send_message("❌ No music playing.", ephemeral=True)
+            return await interaction.response.send_message("❌ No music is currently playing.", ephemeral=True)
         if vc.is_playing():
             vc.pause()
-            await interaction.response.send_message("⏸️ Paused playback.", ephemeral=True)
+            await interaction.response.send_message("⏸️ Playback paused.", ephemeral=True)
         elif vc.is_paused():
             vc.resume()
-            await interaction.response.send_message("▶️ Resumed playback.", ephemeral=True)
+            await interaction.response.send_message("▶️ Playback resumed.", ephemeral=True)
         else:
             await interaction.response.send_message("❌ Nothing is active.", ephemeral=True)
 
     @discord.ui.button(label="⏭️ Skip", style=discord.ButtonStyle.secondary)
     async def skip_track(self, interaction: discord.Interaction, button: discord.ui.Button):
         vc = interaction.guild.voice_client
-        if not vc or not vc.is_playing():
+        if not vc or not (vc.is_playing() or vc.is_paused()):
             return await interaction.response.send_message("❌ Nothing to skip.", ephemeral=True)
         vc.stop()
-        await interaction.response.send_message("⏭️ Skipped to next track.", ephemeral=True)
+        await interaction.response.send_message("⏭️ Skipped current track.", ephemeral=True)
 
     @discord.ui.button(label="📜 Queue", style=discord.ButtonStyle.secondary)
     async def view_queue(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -196,10 +205,10 @@ class MusicControls(discord.ui.View):
         vc = interaction.guild.voice_client
         if vc:
             await vc.disconnect()
-        await interaction.response.send_message("⏹️ Music stopped and disconnected.", ephemeral=True)
+        await interaction.response.send_message("⏹️ Music stopped and bot disconnected.", ephemeral=True)
 
 class Music(commands.Cog):
-    """High-fidelity voice audio streamer, YouTube/Spotify search, 24/7 web radios, and queue controls."""
+    """High-fidelity voice audio streamer, YouTube/SoundCloud/Spotify search, 24/7 web radios, and queue controls."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -213,7 +222,7 @@ class Music(commands.Cog):
     def play_next_song(self, ctx):
         state = self.get_state(ctx.guild.id)
         vc = ctx.guild.voice_client
-        if not vc:
+        if not vc or not vc.is_connected():
             return
 
         if state.loop_single and state.current:
@@ -228,7 +237,7 @@ class Music(commands.Cog):
             state.current = next_source
             next_source.volume = state.volume
             vc.play(next_source, after=lambda e: self.play_next_song(ctx))
-            
+
             dur = format_duration(next_source.duration)
             embed = discord.Embed(
                 title="🎵 Now Playing",
@@ -246,12 +255,16 @@ class Music(commands.Cog):
             await ctx.reply("❌ You must join a voice channel first!")
             return False
         if not ctx.guild.voice_client:
-            await ctx.author.voice.channel.connect()
+            try:
+                await ctx.author.voice.channel.connect(timeout=15.0, reconnect=True)
+            except Exception as e:
+                await ctx.reply(f"❌ Failed to connect to voice channel: `{e}`")
+                return False
         elif ctx.guild.voice_client.channel != ctx.author.voice.channel:
             await ctx.guild.voice_client.move_to(ctx.author.voice.channel)
         return True
 
-    @commands.hybrid_command(name="play", aliases=["p"], description="Play a song from YouTube, Spotify link, or search keyword")
+    @commands.hybrid_command(name="play", aliases=["p"], description="Play a song from YouTube, SoundCloud, or search keywords")
     async def play(self, ctx, *, query: str):
         if not await self.ensure_voice(ctx):
             return
@@ -470,7 +483,7 @@ class Music(commands.Cog):
         if vc.is_playing() or vc.is_paused():
             vc.stop()
         vc.play(source)
-        
+
         calculated_vol = int(source.volume * 100)
         embed = discord.Embed(
             title="📻 24/7 Live Web Radio Started",
@@ -478,7 +491,7 @@ class Music(commands.Cog):
                 f"🎶 **Station:** `{title}`\n"
                 f"🔊 **Stream:** `{url}`\n"
                 f"🎚️ **Current Volume:** `{calculated_vol}%` (optimized for this stream)\n\n"
-                f"💡 *Tip: You can adjust the volume anytime using `/volume <1-100>` (or `&volume <1-100>`).*"
+                f"💡 *Tip: You can adjust the volume anytime using `&volume <1-100>`.*"
             ),
             color=0x9B59B6,
         )

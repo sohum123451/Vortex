@@ -135,6 +135,13 @@ def help_mod_embed() -> discord.Embed:
 def help_ai_embed() -> discord.Embed:
     e = base_embed("🤖 AI & Intelligent Suite", "Powered by Google Gemini 3.6 Flash & Groq High-Speed Engines.", AI_COLOR)
     e.add_field(
+        name="⚡ Autonomous AI Dynamic Runner",
+        value=(
+            "• `&do <instruction>` — **Zero-Shot Dynamic Action:** Ask the bot to do *anything* on the server even if no command exists!"
+        ),
+        inline=False,
+    )
+    e.add_field(
         name="🧠 Core Generative AI",
         value=(
             "• `&chat <prompt>` — High-speed conversational AI\n"
@@ -359,6 +366,17 @@ def help_sound_embed() -> discord.Embed:
 
 def help_dev_embed() -> discord.Embed:
     e = base_embed("👑 Developer & System Controls", "Bot diagnostics, statistics, and owner maintenance tools.", 0x2F3136)
+    e.add_field(
+        name="⚡ Autonomous AI Code Modifier & Dynamic Action",
+        value=(
+            "• `&patch <instruction>` — AI Chat-to-Code modifier with auto-backup, syntax check & hot-reloading\n"
+            "• `&rollback` — Undo last AI code modification\n"
+            "• `&do <prompt>` — Zero-shot dynamic action execution on the fly\n"
+            "• `&viewcode <file>` — Inspect bot source code directly in Discord\n"
+            "• `&cogs` / `&reloadcog <cog>` — Cog manager & live hot-reload"
+        ),
+        inline=False,
+    )
     e.add_field(
         name="Public Diagnostics",
         value=(

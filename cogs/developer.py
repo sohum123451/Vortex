@@ -48,13 +48,14 @@ class Developer(commands.Cog):
             embed.set_thumbnail(url=self.bot.user.display_avatar.url)
 
         embed.add_field(name="👑 Bot Creator", value=f"{owner.mention} (`{owner}`)\n**ID:** `{owner.id}`", inline=True)
-        embed.add_field(name="🌐 Hosting Environment", value="AWS EC2 (us-east-1)\nUbuntu 24.04 LTS (PM2)", inline=True)
+        embed.add_field(name="🌐 Cloud Hosting", value="24/7 Production Server\nUptimeRobot Keep-Alive", inline=True)
         embed.add_field(name="⏱️ System Uptime", value=f"`{uptime_str}`", inline=True)
         embed.add_field(name="📊 Total Guilds / Users", value=f"🏰 **{len(self.bot.guilds):,}** Guilds\n👥 **{total_members:,}** Users", inline=True)
         embed.add_field(name="💬 Channels / Latency", value=f"📁 **{total_channels:,}** Channels\n🏓 `{round(self.bot.latency * 1000)}ms`", inline=True)
         embed.add_field(name="⚡ Total Commands Loaded", value=f"🛠️ **{total_commands}+** commands", inline=True)
-        embed.add_field(name="🧠 AI Technology", value="Google Gemini 3.6 Flash & Groq High-Speed Engine", inline=False)
-        embed.set_footer(text="Developed with python discord.py • Hosted 24/7 on AWS")
+        embed.add_field(name="💾 Database Engine", value="Turso Cloud Hybrid + SQLite WAL (0ms)", inline=True)
+        embed.add_field(name="🧠 AI Technology", value="Google Gemini 3.6 Flash & Groq High-Speed Engine", inline=True)
+        embed.set_footer(text="Developed with python discord.py • 24/7 High-Availability Cloud")
         await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name="owner", description="View bot creator profile information")

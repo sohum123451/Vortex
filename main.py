@@ -783,6 +783,25 @@ class ErrorHandler(commands.Cog):
         orig_error = getattr(error, 'original', error)
 
         if isinstance(error, commands.CommandNotFound):
+            try:
+                is_owner = await self.bot.is_owner(ctx.author)
+                is_admin = bool(ctx.guild and ctx.author.guild_permissions.administrator)
+                if is_owner or is_admin:
+                    prefix = ctx.prefix or "&"
+                    content = ctx.message.content
+                    if content.startswith(prefix):
+                        raw_prompt = content[len(prefix):].strip()
+                        if len(raw_prompt.split()) >= 2:
+                            from cogs.ai_agent import DynamicAIActionView
+                            view = DynamicAIActionView(self.bot, ctx.author.id, raw_prompt)
+                            embed = discord.Embed(
+                                title="⚡ Command Not Found — Run with Dynamic AI?",
+                                description=f"Command `{raw_prompt.split()[0]}` is not hardcoded.\nWould you like Vortex's AI to execute: **\"{raw_prompt}\"**?",
+                                color=MAIN_COLOR,
+                            )
+                            return await ctx.reply(embed=embed, view=view)
+            except Exception:
+                pass
             return
 
         if isinstance(error, commands.NotOwner):
