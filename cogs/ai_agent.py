@@ -63,6 +63,35 @@ class AIAgent(commands.Cog):
             pass
         return False
 
+    async def _send_error_card(self, msg, stage: str, error_title: str, error_detail: str, target_file: str = None, was_rolled_back: bool = False):
+        embed = discord.Embed(
+            title=f"🚨 Execution Error — {error_title}",
+            description=f"**Failed at:** `{stage}`" + (f"\n**Target File:** `{target_file}`" if target_file else ""),
+            color=ERROR_COLOR,
+            timestamp=datetime.now(timezone.utc),
+        )
+        embed.add_field(
+            name="📋 Error Diagnostics",
+            value=f"```py\n{str(error_detail)[:950]}\n```",
+            inline=False
+        )
+        if was_rolled_back:
+            embed.add_field(
+                name="🛡️ Auto-Rollback Safety",
+                value="✅ **Automatic Rollback Completed:** The previous working code was preserved intact.",
+                inline=False
+            )
+        embed.add_field(
+            name="💡 Troubleshooting",
+            value="• Specify the target file explicitly: `&patch in cogs/fun_social.py <prompt>`\n• Use `&viewcode <file>` to inspect code\n• Use `&rollback` to manually revert anytime",
+            inline=False
+        )
+        embed.set_footer(text="Vortex Autonomous Self-Healing Engine")
+        try:
+            await msg.edit(content=None, embed=embed)
+        except Exception:
+            await msg.edit(content=f"❌ **{error_title}** ({stage}):\n```py\n{error_detail[:500]}\n```")
+
     # =========================================================================
     # 🛠️ 1. CHAT-TO-CODE AUTONOMOUS MODIFIER (&patch, &modify, &autocode)
     # =========================================================================
@@ -119,14 +148,14 @@ Respond with JSON only:
             rel_path = route_data.get("target_file", "cogs/custom_commands.py").replace("\\", "/")
             is_new = route_data.get("is_new_file", False)
             cog_name = route_data.get("cog_name")
-        except Exception:
+        except Exception as route_err:
             rel_path = "cogs/custom_commands.py"
             is_new = False
             cog_name = "custom_commands"
 
         target_abs = os.path.abspath(os.path.join(base_dir, rel_path))
         if not target_abs.startswith(base_dir):
-            return await msg.edit(content="❌ **Security Violation:** Target file path outside project directory.")
+            return await self._send_error_card(msg, "Stage 1: Routing", "Security Violation", "Target file path outside project directory.", rel_path)
 
         original_code = ""
         if os.path.exists(target_abs):
@@ -170,7 +199,7 @@ Return the complete updated file content in ```python ... ```:"""
             ai_response = await self._call_gemini(user_content, system_instruction=system_prompt)
             new_code = self._clean_code_fence(ai_response)
         except Exception as e:
-            return await msg.edit(content=f"❌ **AI Generation Error:** {e}")
+            return await self._send_error_card(msg, "Stage 2: Code Generation", "AI Generation Error", str(e), rel_path)
 
         # Step 3: Safety Backup & Syntax Validation
         step_text = (
@@ -192,7 +221,14 @@ Return the complete updated file content in ```python ... ```:"""
         try:
             compile(new_code, target_abs, "exec")
         except SyntaxError as syn_err:
-            return await msg.edit(content=f"❌ **Syntax Check Failed:**\n```py\n{syn_err}\nLine {syn_err.lineno}: {syn_err.text}\n```\nNo changes were applied.")
+            return await self._send_error_card(
+                msg,
+                "Stage 3: AST Syntax Validation",
+                "Python Syntax Error",
+                f"SyntaxError: {syn_err.msg}\nLine {syn_err.lineno}: {syn_err.text}",
+                rel_path,
+                was_rolled_back=True
+            )
 
         # Step 4: Write & Hot Reload
         step_text = (
@@ -227,7 +263,14 @@ Return the complete updated file content in ```python ... ```:"""
                         await self.bot.reload_extension(mod_name)
                     except Exception:
                         pass
-                return await msg.edit(content=f"❌ **Cog Reload Error (Auto-Rolled Back):**\n```py\n{reload_err}\n```")
+                return await self._send_error_card(
+                    msg,
+                    "Stage 4: Extension Hot-Reload",
+                    "Cog Extension Load Error",
+                    str(reload_err),
+                    rel_path,
+                    was_rolled_back=True
+                )
 
         diff = list(difflib.unified_diff(
             original_code.splitlines(),

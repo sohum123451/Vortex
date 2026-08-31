@@ -837,10 +837,23 @@ class ErrorHandler(commands.Cog):
         if isinstance(error, commands.BadArgument):
             return await ctx.reply(f"❌ **Invalid Argument:** {error}")
 
+        import traceback
+        self.bot._last_error_log = {
+            "command": str(ctx.command),
+            "user": str(ctx.author),
+            "error": str(orig_error),
+            "trace": traceback.format_exc(),
+            "time": datetime.now(timezone.utc),
+        }
         print(f"Unhandled Error in {ctx.command}: {orig_error}", flush=True)
         try:
-            err_msg = str(orig_error)
-            await ctx.reply(f"⚠️ **Command Notice:** `{err_msg[:300]}`")
+            embed = discord.Embed(
+                title=f"⚠️ Command Error: &{ctx.command.name if ctx.command else 'unknown'}",
+                description=f"```{str(orig_error)[:400]}```",
+                color=ERROR_COLOR,
+            )
+            embed.set_footer(text="Type &lasterror for developer diagnostics • Use &help for command syntax")
+            await ctx.reply(embed=embed)
         except Exception:
             pass
 

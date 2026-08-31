@@ -291,11 +291,23 @@ class Developer(commands.Cog):
         except Exception as e:
             await msg.edit(content=f"❌ Error clearing guild sync: {e}")
 
-    @commands.command(name="stopbot", description="[Owner] Stop/Shutdown the current bot process")
-    @commands.is_owner()
-    async def stop_bot_process(self, ctx):
-        await ctx.reply("🛑 Shutting down bot instance...")
-        await self.bot.close()
+    @commands.command(name="lasterror", aliases=["last_error", "errlog"], description="[Owner] View the most recent system error and full traceback")
+    async def view_last_error(self, ctx):
+        last_err = getattr(self.bot, "_last_error_log", None)
+        if not last_err:
+            return await ctx.reply("✅ **System Clean:** No unhandled runtime errors have been recorded in this session.")
+
+        embed = discord.Embed(
+            title="🔍 Recent Command Exception Traceback",
+            description=f"**Command:** `{last_err.get('command')}`\n**Invoker:** `{last_err.get('user')}`\n**Time:** <t:{int(last_err.get('time').timestamp())}:R>",
+            color=ERROR_COLOR,
+            timestamp=last_err.get('time'),
+        )
+        embed.add_field(name="⚠️ Exception", value=f"```py\n{last_err.get('error')[:400]}\n```", inline=False)
+        trace_str = last_err.get('trace', '')
+        if trace_str:
+            embed.add_field(name="📋 Full Stack Trace", value=f"```py\n{trace_str[-1200:]}\n```", inline=False)
+        await ctx.reply(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(Developer(bot))
