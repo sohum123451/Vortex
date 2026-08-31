@@ -747,6 +747,26 @@ def init_db():
                 PRIMARY KEY (guild_id, user_id, date_str)
             )
         """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS user_demand_telemetry (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id TEXT,
+                user_id TEXT,
+                input_text TEXT NOT NULL,
+                category TEXT DEFAULT 'missing_command',
+                timestamp TEXT NOT NULL
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS evolution_changelog (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                feature_name TEXT NOT NULL,
+                target_file TEXT NOT NULL,
+                reasoning TEXT NOT NULL,
+                diff_summary TEXT,
+                timestamp TEXT NOT NULL
+            )
+        """)
 
         # Auto-migrate missing columns for existing economy table
         cur.execute("PRAGMA table_info(economy)")
@@ -784,22 +804,31 @@ class ErrorHandler(commands.Cog):
 
         if isinstance(error, commands.CommandNotFound):
             try:
-                is_owner = await self.bot.is_owner(ctx.author)
-                is_admin = bool(ctx.guild and ctx.author.guild_permissions.administrator)
-                if is_owner or is_admin:
-                    prefix = ctx.prefix or "&"
-                    content = ctx.message.content
-                    if content.startswith(prefix):
-                        raw_prompt = content[len(prefix):].strip()
-                        if len(raw_prompt.split()) >= 2:
-                            from cogs.ai_agent import DynamicAIActionView
-                            view = DynamicAIActionView(self.bot, ctx.author.id, raw_prompt)
-                            embed = discord.Embed(
-                                title="⚡ Command Not Found — Run with Dynamic AI?",
-                                description=f"Command `{raw_prompt.split()[0]}` is not hardcoded.\nWould you like Vortex's AI to execute: **\"{raw_prompt}\"**?",
-                                color=MAIN_COLOR,
+                prefix = ctx.prefix or "&"
+                content = ctx.message.content
+                if content.startswith(prefix):
+                    raw_cmd = content[len(prefix):].strip()
+                    try:
+                        with get_db() as db:
+                            db.execute(
+                                "INSERT INTO user_demand_telemetry (guild_id, user_id, input_text, category, timestamp) VALUES (?, ?, ?, ?, ?)",
+                                (str(ctx.guild.id if ctx.guild else "DM"), str(ctx.author.id), raw_cmd, "missing_command", datetime.now(timezone.utc).isoformat())
                             )
-                            return await ctx.reply(embed=embed, view=view)
+                            db.commit()
+                    except Exception:
+                        pass
+
+                    is_owner = await self.bot.is_owner(ctx.author)
+                    is_admin = bool(ctx.guild and ctx.author.guild_permissions.administrator)
+                    if (is_owner or is_admin) and len(raw_cmd.split()) >= 2:
+                        from cogs.ai_agent import DynamicAIActionView
+                        view = DynamicAIActionView(self.bot, ctx.author.id, raw_cmd)
+                        embed = discord.Embed(
+                            title="⚡ Command Not Found — Run with Dynamic AI?",
+                            description=f"Command `{raw_cmd.split()[0]}` is not hardcoded.\nWould you like Vortex's AI to execute: **\"{raw_cmd}\"**?",
+                            color=MAIN_COLOR,
+                        )
+                        return await ctx.reply(embed=embed, view=view)
             except Exception:
                 pass
             return

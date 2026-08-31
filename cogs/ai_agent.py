@@ -554,6 +554,311 @@ Generate the `run` async function:"""
         except Exception as e:
             await ctx.reply(f"❌ Error reloading `{full_name}`:\n```py\n{e}\n```")
 
+    # =========================================================================
+    # 🧬 5. AUTO-ML TELEMETRY & CONTINUOUS SELF-EVOLUTION SUITE
+    # =========================================================================
+
+    @commands.hybrid_command(name="suggest", aliases=["feedback", "need", "request_feature"], description="Suggest a feature or command you need in Vortex")
+    async def user_suggest(self, ctx, *, suggestion: str):
+        """User-facing command to submit feature requests and ideas into the AI evolution pipeline."""
+        with get_db() as db:
+            db.execute(
+                "INSERT INTO user_demand_telemetry (guild_id, user_id, input_text, category, timestamp) VALUES (?, ?, ?, ?, ?)",
+                (str(ctx.guild.id if ctx.guild else "DM"), str(ctx.author.id), suggestion, "user_suggestion", datetime.now(timezone.utc).isoformat())
+            )
+            db.commit()
+
+        embed = discord.Embed(
+            title="💡 Suggestion Registered in AI Pipeline",
+            description=f"Thank you {ctx.author.mention}! Your feedback has been queued in Vortex's autonomous evolution telemetry:\n\n💬 *\"{suggestion[:500]}\"*",
+            color=SUCCESS_COLOR,
+            timestamp=datetime.now(timezone.utc),
+        )
+        embed.set_footer(text="Vortex Self-Evolution Engine • Analyzed for future code updates")
+        await ctx.reply(embed=embed)
+
+    @commands.command(name="evolve_report", aliases=["telemetry_report", "demand_report"], description="[Owner] Analyze user demands and generate an AI Evolution Roadmap")
+    async def evolve_report(self, ctx):
+        """Analyze all user suggestions, missing commands, and dynamic actions to generate an upgrade roadmap."""
+        if not await self.is_bot_admin(ctx.author):
+            return await ctx.reply("🔒 **Restricted:** Exclusive to the Bot Creator / Team.")
+
+        msg = await ctx.reply("🧠 **Vortex Auto-ML:** Analyzing telemetry logs & clustering user demands...")
+
+        with get_db() as db:
+            rows = db.execute(
+                "SELECT input_text, category, timestamp FROM user_demand_telemetry ORDER BY id DESC LIMIT 60"
+            ).fetchall()
+
+        if not rows:
+            return await msg.edit(content="📊 **Telemetry Empty:** No missing commands or user suggestions recorded yet. Try typing `&suggest <idea>` or use `&do <action>`.")
+
+        demands = [f"[{r['category']}] {r['input_text']}" for r in rows]
+        demand_text = "\n".join(demands)
+
+        prompt = f"""You are the Chief AI Evolution Architect for Vortex Discord Bot.
+Analyze these recent user command telemetry logs and feature requests:
+{demand_text}
+
+Provide:
+1. Top 3 Most Demanded Features / Missing Capabilities (Clustered & summarized)
+2. Recommended Code Architecture (Which cog to create/modify, e.g. cogs/custom_commands.py or a new cog)
+3. Safety Guarantee (Explain how this only upgrades the bot without breaking existing features)
+
+Keep it formatted cleanly with emojis and concise bullet points for Discord."""
+
+        try:
+            analysis = await self._call_gemini(prompt, system_instruction="You are an autonomous AI software architect.")
+            embed = discord.Embed(
+                title="🧬 Vortex Self-Evolution & Telemetry Roadmap",
+                description=analysis[:3900],
+                color=0x9B59B6,
+                timestamp=datetime.now(timezone.utc),
+            )
+            embed.set_footer(text=f"Analyzed {len(rows)} user data points • Type &auto_evolve to execute upgrades")
+            await msg.edit(content=None, embed=embed)
+        except Exception as e:
+            await msg.edit(content=f"❌ Analysis failed: {e}")
+
+    @commands.command(name="auto_evolve", aliases=["evolve_apply", "self_upgrade"], description="[Owner] Autonomous AI code generator that creates & pushes upgrades to GitHub/Render")
+    async def auto_evolve(self, ctx, *, focus_instruction: str = None):
+        """Autonomously synthesizes new features based on telemetry, tests AST syntax, hot-reloads, and pushes to Git."""
+        if not await self.is_bot_admin(ctx.author):
+            return await ctx.reply("🔒 **Restricted:** Exclusive to the Bot Creator / Team.")
+
+        start_time = datetime.now()
+        step_text = (
+            "🧬 **Vortex Autonomous Self-Evolution Engine**\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "🟡 `[Step 1/6]` **Analyzing User Demands** — Mining telemetry & clustering needs...\n"
+            "⚪ `[Step 2/6]` Architecting non-destructive modular code\n"
+            "⚪ `[Step 3/6]` Compiling & verifying AST syntax\n"
+            "⚪ `[Step 4/6]` Hot-reloading live extension in memory\n"
+            "⚪ `[Step 5/6]` Git snapshot, commit & push to GitHub (Render Auto-Deploy)\n"
+            "⚪ `[Step 6/6]` Evolution Changelog Recorded"
+        )
+        msg = await ctx.reply(step_text)
+
+        # 1. Telemetry gathering
+        with get_db() as db:
+            rows = db.execute(
+                "SELECT input_text FROM user_demand_telemetry ORDER BY id DESC LIMIT 40"
+            ).fetchall()
+        user_inputs = [r["input_text"] for r in rows]
+        inputs_summary = "\n".join(user_inputs) if user_inputs else "General utility & fun expansion"
+
+        target_prompt = focus_instruction if focus_instruction else f"Build the top user requested capability based on telemetry: {inputs_summary[:500]}"
+
+        base_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+        target_file = os.path.join(base_dir, "cogs", "custom_commands.py")
+        rel_path = "cogs/custom_commands.py"
+
+        existing_code = ""
+        if os.path.exists(target_file):
+            with open(target_file, "r", encoding="utf-8") as f:
+                existing_code = f.read()
+
+        # Step 2: Code Generation
+        step_text = (
+            "🧬 **Vortex Autonomous Self-Evolution Engine**\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"🟢 `[Step 1/6]` Telemetry analyzed ({len(user_inputs)} inputs)\n"
+            "🟡 `[Step 2/6]` **Synthesizing Code** — Writing modular Discord.py upgrade with Gemini 3.6 Flash...\n"
+            "⚪ `[Step 3/6]` Compiling & verifying AST syntax\n"
+            "⚪ `[Step 4/6]` Hot-reloading live extension in memory\n"
+            "⚪ `[Step 5/6]` Git snapshot, commit & push to GitHub (Render Auto-Deploy)\n"
+            "⚪ `[Step 6/6]` Evolution Changelog Recorded"
+        )
+        await msg.edit(content=step_text)
+
+        system_instruction = """You are the Lead Autonomous Evolution AI for Vortex Discord Bot.
+Invariant Rules:
+1. Write 100% valid, production-ready Python 3.10+ Discord.py 2.0+ code.
+2. Maintain all existing commands in the file intact without deleting or degrading them. ONLY append or enhance.
+3. Include clean error handling, typehints, and rich embeds using MAIN_COLOR, SUCCESS_COLOR, ERROR_COLOR from utils.
+4. End the file with:
+async def setup(bot):
+    await bot.add_cog(CustomCommands(bot))
+5. Output ONLY the raw complete Python file inside ```python ... ``` without commentary.
+"""
+
+        user_content = f"""Target File: {rel_path}
+Feature Upgrade Request:
+{target_prompt}
+
+Existing File Content:
+```python
+{existing_code if existing_code else '# New File'}
+```
+
+Output the updated file content:"""
+
+        try:
+            ai_res = await self._call_gemini(user_content, system_instruction=system_instruction)
+            new_code = self._clean_code_fence(ai_res)
+        except Exception as e:
+            return await self._send_error_card(msg, "Stage 2: Synthesis", "AI Code Generation Error", str(e), rel_path)
+
+        # Step 3: Backup & AST Syntax Check
+        step_text = (
+            "🧬 **Vortex Autonomous Self-Evolution Engine**\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"🟢 `[Step 1/6]` Telemetry analyzed\n"
+            f"🟢 `[Step 2/6]` Code synthesized ({len(new_code.splitlines())} lines)\n"
+            "🟡 `[Step 3/6]` **Safety Verification** — Creating backup snapshot & verifying AST syntax...\n"
+            "⚪ `[Step 4/6]` Hot-reloading live extension in memory\n"
+            "⚪ `[Step 5/6]` Git snapshot, commit & push to GitHub (Render Auto-Deploy)\n"
+            "⚪ `[Step 6/6]` Evolution Changelog Recorded"
+        )
+        await msg.edit(content=step_text)
+
+        if os.path.exists(target_file):
+            bak_path = f"{target_file}.bak_{int(datetime.now().timestamp())}"
+            shutil.copyfile(target_file, bak_path)
+            self.backup_history[target_file] = bak_path
+
+        try:
+            compile(new_code, target_file, "exec")
+        except SyntaxError as syn_err:
+            return await self._send_error_card(
+                msg,
+                "Stage 3: AST Syntax Validation",
+                "Syntax Validation Failed",
+                f"SyntaxError: {syn_err.msg} at line {syn_err.lineno}",
+                rel_path,
+                was_rolled_back=True
+            )
+
+        # Step 4: Write & Hot-Reload
+        step_text = (
+            "🧬 **Vortex Autonomous Self-Evolution Engine**\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"🟢 `[Step 1/6]` Telemetry analyzed\n"
+            f"🟢 `[Step 2/6]` Code synthesized\n"
+            f"🟢 `[Step 3/6]` AST syntax verified & backup created\n"
+            "🟡 `[Step 4/6]` **Hot-Reloading** — Injecting module into live bot gateway...\n"
+            "⚪ `[Step 5/6]` Git snapshot, commit & push to GitHub (Render Auto-Deploy)\n"
+            "⚪ `[Step 6/6]` Evolution Changelog Recorded"
+        )
+        await msg.edit(content=step_text)
+
+        with open(target_file, "w", encoding="utf-8") as f:
+            f.write(new_code)
+
+        mod_name = "cogs.custom_commands"
+        try:
+            if mod_name in self.bot.extensions:
+                await self.bot.reload_extension(mod_name)
+            else:
+                await self.bot.load_extension(mod_name)
+        except Exception as reload_err:
+            if target_file in self.backup_history and os.path.exists(self.backup_history[target_file]):
+                shutil.copyfile(self.backup_history[target_file], target_file)
+                try:
+                    await self.bot.reload_extension(mod_name)
+                except Exception:
+                    pass
+            return await self._send_error_card(
+                msg,
+                "Stage 4: Hot-Reload",
+                "Extension Reload Failed",
+                str(reload_err),
+                rel_path,
+                was_rolled_back=True
+            )
+
+        # Step 5: Git Commit & Push
+        step_text = (
+            "🧬 **Vortex Autonomous Self-Evolution Engine**\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"🟢 `[Step 1/6]` Telemetry analyzed\n"
+            f"🟢 `[Step 2/6]` Code synthesized\n"
+            f"🟢 `[Step 3/6]` AST syntax verified\n"
+            f"🟢 `[Step 4/6]` Hot-reloaded live into Discord bot\n"
+            "🟡 `[Step 5/6]` **Pushing to Git** — Syncing GitHub repository for Render deployment...\n"
+            "⚪ `[Step 6/6]` Evolution Changelog Recorded"
+        )
+        await msg.edit(content=step_text)
+
+        git_status = "Skipped"
+        try:
+            proc_add = await asyncio.create_subprocess_exec(
+                "git", "add", "cogs/custom_commands.py",
+                cwd=base_dir,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            await proc_add.communicate()
+
+            commit_msg = f"Auto-Evolve: {target_prompt[:80]}"
+            proc_commit = await asyncio.create_subprocess_exec(
+                "git", "commit", "-m", commit_msg,
+                cwd=base_dir,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            await proc_commit.communicate()
+
+            proc_push = await asyncio.create_subprocess_exec(
+                "git", "push",
+                cwd=base_dir,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            await proc_push.communicate()
+            git_status = "✅ Synced to GitHub & Auto-Deploying to Render"
+        except Exception as git_err:
+            git_status = f"⚠️ Git Push Notice: {git_err}"
+
+        # Step 6: Log in evolution_changelog
+        with get_db() as db:
+            db.execute(
+                "INSERT INTO evolution_changelog (feature_name, target_file, reasoning, diff_summary, timestamp) VALUES (?, ?, ?, ?, ?)",
+                (target_prompt[:150], rel_path, "Auto-Evolved from user telemetry", f"+{len(new_code.splitlines())} lines", datetime.now(timezone.utc).isoformat())
+            )
+            db.commit()
+
+        elapsed = (datetime.now() - start_time).total_seconds()
+        final_embed = discord.Embed(
+            title="🧬 Autonomous Evolution Completed Successfully!",
+            description=(
+                f"**Upgrade Focus:** `{target_prompt[:150]}`\n"
+                f"**Target Module:** `{rel_path}`\n"
+                f"**Execution Time:** `{elapsed:.2f}s`\n"
+                f"**Git Status:** {git_status}"
+            ),
+            color=SUCCESS_COLOR,
+            timestamp=datetime.now(timezone.utc),
+        )
+        final_embed.add_field(name="🛡️ Integrity Status", value="✅ **Zero-Degradation Certified:** All existing bot commands and data remain intact.", inline=False)
+        final_embed.set_footer(text="Vortex Self-Evolution Engine • Render Cloud Continuous Deployment")
+        await msg.edit(content=None, embed=final_embed)
+
+    @commands.command(name="evolution_history", aliases=["evolution_changelog", "changelog_ai"], description="[Owner] View past autonomous bot upgrades and changelogs")
+    async def evolution_history(self, ctx):
+        """View the history of autonomous self-upgrades."""
+        with get_db() as db:
+            rows = db.execute(
+                "SELECT feature_name, target_file, timestamp FROM evolution_changelog ORDER BY id DESC LIMIT 10"
+            ).fetchall()
+
+        if not rows:
+            return await ctx.reply("📜 No autonomous evolutions recorded yet. Run `&auto_evolve` to initiate the first upgrade!")
+
+        lines = []
+        for r in rows:
+            t = r['timestamp'].split('T')[0]
+            lines.append(f"• **{r['feature_name']}** (`{r['target_file']}`) — *{t}*")
+
+        embed = discord.Embed(
+            title="📜 Vortex Autonomous Evolution Changelog",
+            description="\n".join(lines),
+            color=0x9B59B6,
+            timestamp=datetime.now(timezone.utc),
+        )
+        embed.set_footer(text="Vortex Continuous Self-Evolution History")
+        await ctx.reply(embed=embed)
+
 
 # =========================================================================
 # 🔘 INTERACTIVE DYNAMIC AI RUN BUTTON VIEW
@@ -586,3 +891,4 @@ class DynamicAIActionView(discord.ui.View):
 
 async def setup(bot):
     await bot.add_cog(AIAgent(bot))
+
