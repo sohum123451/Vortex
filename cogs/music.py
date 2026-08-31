@@ -21,14 +21,8 @@ ytdl_format_options = {
     'logtostderr': False,
     'quiet': True,
     'no_warnings': True,
-    'default_search': 'ytsearch',
+    'socket_timeout': 5,
     'source_address': '0.0.0.0',
-    'extractor_args': {
-        'youtube': {
-            'player_client': ['ios', 'android', 'mweb', 'web'],
-            'player_skip': ['configs'],
-        }
-    },
     'http_headers': {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -85,40 +79,48 @@ class YTDLSource(discord.PCMVolumeTransformer):
     async def from_query(cls, query, *, loop=None, stream=True):
         loop = loop or asyncio.get_event_loop()
         
-        if not query.startswith(("http://", "https://", "ytsearch:", "scsearch:", "ytsearch1:")):
-            search_query = f"ytsearch1:{query}"
-        else:
-            search_query = query
+        is_direct_url = query.startswith(("http://", "https://"))
 
-        # 1. First attempt: Standard YouTube extractor
-        try:
-            to_run = functools.partial(ytdl.extract_info, search_query, download=not stream)
-            data = await loop.run_in_executor(None, to_run)
-            if data and 'entries' in data:
-                if not data['entries']:
-                    raise Exception("No YouTube results.")
-                data = data['entries'][0]
-            if not data or not data.get('url'):
-                raise Exception("Missing audio URL from YouTube.")
-        except Exception as yt_err:
-            # 2. Fallback attempt: SoundCloud search fallback
+        data = None
+
+        if is_direct_url:
+            # 1. Direct URL: Try YouTube first
+            try:
+                to_run = functools.partial(ytdl.extract_info, query, download=not stream)
+                data = await loop.run_in_executor(None, to_run)
+                if data and 'entries' in data and data['entries']:
+                    data = data['entries'][0]
+            except Exception:
+                pass
+
+        if not data or not data.get('url'):
+            # 2. Search query or URL fallback: Use SoundCloud (fastest on datacenter IPs)
             clean_query = query
-            if "youtube.com" in query or "youtu.be" in query:
-                clean_query = re.sub(r'https?://[^\s]+', '', query).strip() or query
+            if is_direct_url:
+                clean_query = re.sub(r'https?://[^\s]+', '', query).strip() or "trending music"
             
-            sc_query = f"scsearch:{clean_query}" if not clean_query.startswith("scsearch:") else clean_query
+            sc_query = f"scsearch1:{clean_query}" if not clean_query.startswith("scsearch1:") else clean_query
             try:
                 to_run_sc = functools.partial(ytdl_sc.extract_info, sc_query, download=not stream)
                 data = await loop.run_in_executor(None, to_run_sc)
-                if data and 'entries' in data:
-                    if not data['entries']:
-                        raise Exception("No SoundCloud results.")
+                if data and 'entries' in data and data['entries']:
                     data = data['entries'][0]
             except Exception:
-                raise yt_err
+                pass
 
-        if not data:
-            raise Exception("No search results found.")
+        if not data or not data.get('url'):
+            # 3. Final fallback: YouTube Search
+            yt_query = f"ytsearch1:{query}"
+            try:
+                to_run_yt = functools.partial(ytdl.extract_info, yt_query, download=not stream)
+                data = await loop.run_in_executor(None, to_run_yt)
+                if data and 'entries' in data and data['entries']:
+                    data = data['entries'][0]
+            except Exception as final_err:
+                raise Exception(f"Unable to load audio track: {final_err}")
+
+        if not data or not data.get('url'):
+            raise Exception("No playable audio tracks found.")
 
         filename = data['url'] if stream else ytdl.prepare_filename(data)
         headers = data.get('http_headers')
