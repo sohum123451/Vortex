@@ -34,10 +34,15 @@ if os.path.exists(cookies_file):
     ytdl_format_options['cookiefile'] = cookies_file
 
 def make_ffmpeg_audio(url_or_path, http_headers=None):
-    import shutil
+    try:
+        import imageio_ffmpeg
+        executable = imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        import shutil
+        executable = shutil.which('ffmpeg') or 'ffmpeg'
+
     before = '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'
     opts = {'before_options': before, 'options': '-vn -loglevel panic -ar 48000 -ac 2'}
-    executable = shutil.which('ffmpeg') or 'ffmpeg'
     return discord.FFmpegPCMAudio(url_or_path, executable=executable, **opts)
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)

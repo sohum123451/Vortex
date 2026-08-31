@@ -9,3 +9,4 @@ yt-dlp
 pynacl
 davey
 requests
+imageio-ffmpeg
