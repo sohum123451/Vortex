@@ -44,13 +44,13 @@ ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 ytdl_sc = youtube_dl.YoutubeDL({**ytdl_format_options, 'default_search': 'scsearch'})
 
 RADIO_STREAMS = {
-    "lofi": ("https://stream.zeno.fm/f3wvbbqmdg8uv", "Lofi Hip Hop Chill Beats ☕", 0.6),
-    "synthwave": ("https://stream.nightride.fm/nightride.mp3", "Synthwave / Cyberpunk 80s 🌌", 0.8),
-    "anime": ("https://listen.moe/stream", "Anime OST & J-Pop Hits 🌸", 0.8),
-    "chill": ("https://stream.zeno.fm/0r0xa792kwzuv", "Chillout Lounge & Ambient 🍃", 0.7),
-    "jazz": ("https://stream.somafm.com/sonicuniverse-128-mp3", "Smooth Coffee Jazz 🎷", 0.7),
-    "classical": ("https://stream.srg-ssr.ch/m/rsc_de/mp3_128", "Peaceful Classical Piano & Orchestra 🎹", 0.7),
-    "gaming": ("https://stream.somafm.com/groovesalad-256-mp3", "Epic 256kbps HD Gaming & Electro 🎮", 0.7),
+    "lofi": ("https://stream.zeno.fm/f3wvbbqmdg8uv", "Lofi Hip Hop Chill Beats ☕", 1.0),
+    "synthwave": ("https://stream.nightride.fm/nightride.mp3", "Synthwave / Cyberpunk 80s 🌌", 1.0),
+    "anime": ("https://listen.moe/stream", "Anime OST & J-Pop Hits 🌸", 1.0),
+    "chill": ("https://stream.zeno.fm/0r0xa792kwzuv", "Chillout Lounge & Ambient 🍃", 1.0),
+    "jazz": ("https://stream.somafm.com/sonicuniverse-128-mp3", "Smooth Coffee Jazz 🎷", 1.0),
+    "classical": ("https://stream.srg-ssr.ch/m/rsc_de/mp3_128", "Peaceful Classical Piano & Orchestra 🎹", 1.0),
+    "gaming": ("https://stream.somafm.com/groovesalad-256-mp3", "Epic 256kbps HD Gaming & Electro 🎮", 1.0),
 }
 
 def format_duration(duration):
@@ -65,7 +65,7 @@ def format_duration(duration):
         return "Stream"
 
 class YTDLSource(discord.PCMVolumeTransformer):
-    def __init__(self, source, *, data, volume=0.8):
+    def __init__(self, source, *, data, volume=1.0):
         super().__init__(source, volume)
         self.data = data
         self.title = data.get('title', 'Unknown Title')
@@ -139,7 +139,7 @@ class MusicPlayerState:
         self.voice_client = None
         self.loop_single = False
         self.loop_queue = False
-        self.volume = 0.7
+        self.volume = 1.0
 
 class MusicControls(discord.ui.View):
     def __init__(self, cog, ctx):
