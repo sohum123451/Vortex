@@ -142,7 +142,18 @@ def help_ai_embed() -> discord.Embed:
         inline=False,
     )
     e.add_field(
-        name="🧠 Core Generative AI",
+        name="🧠 Advanced AI Roleplay & Adventure",
+        value=(
+            "• `&ai_persona <character> <msg>` — Talk to any fictional or historical character\n"
+            "• `&ai_dungeon [action]` — Interactive choose-your-own-adventure fantasy RPG\n"
+            "• `&ai_debate <topic>` — 2-Sided structured debate with neutral verdict\n"
+            "• `&roast_server` — Playful AI roast of the server setup\n"
+            "• `&ai_summarize_chat [limit]` — Executive summary of recent channel chat"
+        ),
+        inline=False,
+    )
+    e.add_field(
+        name="💬 Core Conversational & Tools",
         value=(
             "• `&chat <prompt>` — High-speed conversational AI\n"
             "• `&ask <question>` — Multimodal image Q&A *(attach image + &ask)*\n"
@@ -161,17 +172,6 @@ def help_ai_embed() -> discord.Embed:
             "• `&sql_gen <description>` — Generate optimized SQL queries\n"
             "• `&math_solver <problem>` — Step-by-step mathematical reasoning\n"
             "• `&eli5 <concept>` — Explain concepts simply like I'm 5"
-        ),
-        inline=False,
-    )
-    e.add_field(
-        name="🎭 Creative & Companion",
-        value=(
-            "• `&story <theme>` — Engaging short story generator\n"
-            "• `&poem <topic>` — Rhyming poetry generator\n"
-            "• `&roast [@user]` — Playful AI roast\n"
-            "• `&compliment [@user]` — Uplifting AI compliment\n"
-            "• `&v_toggle` / `&v_stop` — Conversational memory companion"
         ),
         inline=False,
     )

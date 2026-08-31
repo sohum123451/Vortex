@@ -452,8 +452,114 @@ class AISuite(commands.Cog):
     @commands.command(name="ai_hindi", description="AI English to Hindi translator: &ai_hindi <text>")
     async def ai_hindi(self, ctx, *, text: str):
         await ctx.defer()
-        res = await self.generate_ai_response(f"Translate to Hindi (Devanagari script + English phonetic):\n\n{text}")
+        res = await self.generate_ai(f"Translate to Hindi (Devanagari script + English phonetic):\n\n{text}")
         await ctx.reply(f"🇮🇳 **Hindi Translation:**\n{res[:2000]}")
+
+    @commands.hybrid_command(name="ai_persona", aliases=["persona", "roleplay"], description="Chat with any AI character: &ai_persona <character> <message>")
+    async def ai_persona(self, ctx, character: str, *, message: str):
+        """Talk to any fictional character, historical figure, or anime hero."""
+        await ctx.defer()
+        system = f"You are roleplaying completely in-character as {character}. Stay true to their personality, speech patterns, catchphrases, and demeanor. Keep replies under 300 words."
+        try:
+            res = await self.generate_ai(message, system_instruction=system)
+            embed = discord.Embed(
+                title=f"🎭 {character.title()}",
+                description=res[:2000],
+                color=0x9B59B6,
+                timestamp=datetime.now(timezone.utc),
+            )
+            embed.set_footer(text=f"Roleplay Chat with {ctx.author.display_name}")
+            await ctx.reply(embed=embed)
+        except Exception as e:
+            await ctx.reply(f"❌ AI Persona error: {e}")
+
+    @commands.hybrid_command(name="ai_dungeon", aliases=["dungeon_story", "rpg_story"], description="Interactive choose-your-own-adventure story: &ai_dungeon [action]")
+    async def ai_dungeon(self, ctx, *, action: str = "Begin my adventure in the Enchanted Kingdom"):
+        """Interactive text RPG where every choice shapes the unfolding story."""
+        await ctx.defer()
+        system = "You are a master tabletop Dungeon Master. Write an immersive 2-paragraph fantasy adventure segment based on the player's action, and provide 3 numbered choices (1, 2, 3) at the end for what they can do next."
+        try:
+            res = await self.generate_ai(f"Player Action: {action}", system_instruction=system)
+            embed = discord.Embed(
+                title="🏰 AI Dungeon Chronicle",
+                description=res[:2000],
+                color=0xE67E22,
+                timestamp=datetime.now(timezone.utc),
+            )
+            embed.set_footer(text="Type &ai_dungeon <your choice or action> to continue the journey!")
+            await ctx.reply(embed=embed)
+        except Exception as e:
+            await ctx.reply(f"❌ Dungeon Master error: {e}")
+
+    @commands.hybrid_command(name="ai_debate", aliases=["debate"], description="Generate a 2-sided structured debate: &ai_debate <topic>")
+    async def ai_debate(self, ctx, *, topic: str):
+        """Generates opposing arguments and a neutral philosophical verdict on any topic."""
+        await ctx.defer()
+        system = "You are an objective Oxford debate moderator. Provide strong Argument For, strong Argument Against, and a balanced synthesis verdict on the topic."
+        try:
+            res = await self.generate_ai(f"Debate Topic: {topic}", system_instruction=system)
+            embed = discord.Embed(
+                title=f"⚖️ AI Debate: {topic[:100]}",
+                description=res[:2000],
+                color=0x3498DB,
+                timestamp=datetime.now(timezone.utc),
+            )
+            await ctx.reply(embed=embed)
+        except Exception as e:
+            await ctx.reply(f"❌ Debate error: {e}")
+
+    @commands.hybrid_command(name="roast_server", description="AI analyzes the server and gives a playful roast")
+    async def roast_server(self, ctx):
+        """Playfully roasts the Discord server based on its stats and channel names."""
+        if not ctx.guild:
+            return await ctx.reply("❌ This command must be used in a Discord server.")
+        await ctx.defer()
+        channels = [c.name for c in ctx.guild.text_channels[:15]]
+        roles = [r.name for r in ctx.guild.roles[1:10]]
+        prompt = f"Server Name: {ctx.guild.name}\nMember Count: {ctx.guild.member_count}\nChannels: {', '.join(channels)}\nRoles: {', '.join(roles)}"
+        system = "You are a witty, hilarious stand-up comedian. Write a playful, savage 2-paragraph roast of this Discord server. Keep it PG-13 friendly and funny."
+        try:
+            res = await self.generate_ai(prompt, system_instruction=system)
+            embed = discord.Embed(
+                title=f"🔥 Server Roast: {ctx.guild.name}",
+                description=res[:2000],
+                color=ERROR_COLOR,
+                timestamp=datetime.now(timezone.utc),
+            )
+            embed.set_footer(text="All in good fun! • Powered by Gemini AI")
+            await ctx.reply(embed=embed)
+        except Exception as e:
+            await ctx.reply(f"❌ Server Roast error: {e}")
+
+    @commands.hybrid_command(name="ai_summarize_chat", description="Summarize recent channel messages with AI: &ai_summarize_chat [limit]")
+    @commands.has_permissions(manage_messages=True)
+    async def ai_summarize_chat(self, ctx, limit: int = 30):
+        """Summarizes recent chat activity and conversations in the current channel."""
+        if not 5 <= limit <= 100:
+            return await ctx.reply("❌ Limit must be between 5 and 100 messages.")
+        await ctx.defer()
+        messages = []
+        async for m in ctx.channel.history(limit=limit):
+            if not m.author.bot and m.content:
+                messages.append(f"{m.author.display_name}: {m.content[:150]}")
+        messages.reverse()
+        if not messages:
+            return await ctx.reply("❌ No chat messages found to summarize.")
+
+        chat_log = "\n".join(messages[:50])
+        system = "You are an executive summarizer. Analyze this Discord channel chat log and provide a bullet-point summary of what was discussed, key topics, and major highlights."
+        try:
+            res = await self.generate_ai(chat_log, system_instruction=system)
+            embed = discord.Embed(
+                title=f"📝 Chat Summary (#{ctx.channel.name})",
+                description=res[:2000],
+                color=SUCCESS_COLOR,
+                timestamp=datetime.now(timezone.utc),
+            )
+            embed.set_footer(text=f"Analyzed {len(messages)} recent messages")
+            await ctx.reply(embed=embed)
+        except Exception as e:
+            await ctx.reply(f"❌ Summarize Chat error: {e}")
 
 async def setup(bot):
     await bot.add_cog(AISuite(bot))

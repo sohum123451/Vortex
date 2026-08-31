@@ -162,27 +162,97 @@ class TriviaQuiz(commands.Cog):
         view = TriviaView(ctx.author, c, opts)
         await ctx.reply(embed=embed, view=view)
 
-    @commands.command(name="riddle", description="Solve a mind-bending riddle")
+    @commands.hybrid_command(name="ai_trivia", aliases=["aitrivia", "custom_trivia"], description="Play an AI-generated trivia game on ANY custom topic: &ai_trivia [topic]")
+    async def ai_trivia(self, ctx, *, topic: str = "General Knowledge"):
+        """Generates dynamic 4-option trivia with interactive Discord buttons on any topic."""
+        await ctx.defer()
+        from utils import generate_ai
+        prompt = f"""Generate 1 multiple choice trivia question about '{topic}'.
+Respond in strict JSON format:
+{{
+  "question": "The question text",
+  "correct": "The correct answer",
+  "wrong": ["Incorrect 1", "Incorrect 2", "Incorrect 3"],
+  "difficulty": "Easy/Medium/Hard"
+}}"""
+        try:
+            res = await generate_ai(prompt, system_instruction="You are a trivia master. Respond strictly with raw JSON.")
+            clean = res.strip().strip("`").replace("json", "").strip()
+            import json
+            data = json.loads(clean)
+            q = data["question"]
+            correct = data["correct"]
+            options = data["wrong"] + [correct]
+            random.shuffle(options)
+            diff = data.get("difficulty", "Medium")
+
+            embed = discord.Embed(
+                title=f"🧠 AI Trivia: {topic.title()}",
+                description=f"**{q}**\n\n*Difficulty:* `{diff}`",
+                color=0x9B59B6,
+            )
+            embed.set_footer(text=f"Game for {ctx.author.display_name} • Powered by Gemini AI")
+            view = TriviaView(ctx.author, correct, options)
+            await ctx.reply(embed=embed, view=view)
+        except Exception:
+            # Fallback to OpenTDB
+            res = await self.fetch_opentdb_question()
+            if res:
+                q, c, opts, diff, cat = res
+                embed = discord.Embed(
+                    title=f"🧠 General Trivia: {cat}",
+                    description=f"**{q}**\n\n*Difficulty:* `{diff}`",
+                    color=MAIN_COLOR,
+                )
+                view = TriviaView(ctx.author, c, opts)
+                await ctx.reply(embed=embed, view=view)
+            else:
+                await ctx.reply("❌ Trivia server is temporarily busy.")
+
+    @commands.hybrid_command(name="riddle", description="Solve a mind-bending AI riddle")
     async def riddle(self, ctx):
-        item = random.choice(RIDDLES)
+        await ctx.defer()
+        from utils import generate_ai
+        prompt = """Generate a clever, poetic, original riddle.
+Respond in strict JSON format:
+{
+  "question": "Riddle text here...",
+  "answer": "short single-word answer",
+  "hint": "a subtle 1-sentence hint"
+}"""
+        try:
+            res = await generate_ai(prompt, system_instruction="You are a mystical sphinx riddle creator. Output JSON only.")
+            clean = res.strip().strip("`").replace("json", "").strip()
+            import json
+            data = json.loads(clean)
+            q = data["question"]
+            a = data["answer"].strip()
+            hint = data.get("hint", "Think outside the box!")
+        except Exception:
+            item = random.choice(RIDDLES)
+            q = item["q"]
+            a = item["a"]
+            hint = "Think metaphorical!"
+
         embed = discord.Embed(
-            title="🧩 Riddle Me This",
-            description=f"**{item['q']}**\n\n*Type your guess in chat within 30 seconds!*",
+            title="🧩 Riddle of the Sphinx",
+            description=f"**{q}**\n\n💡 *Hint:* ||{hint}||\n*Type your guess in chat within 35 seconds!*",
             color=INFO_COLOR,
         )
+        embed.set_footer(text="Powered by Gemini AI")
         await ctx.reply(embed=embed)
 
         def check(m):
             return m.channel == ctx.channel and not m.author.bot
 
         try:
-            msg = await self.bot.wait_for("message", check=check, timeout=30)
-            if item["a"].lower() in msg.content.lower():
-                await msg.reply(f"🎉 **Brilliant!** {msg.author.mention} solved the riddle! The answer was **{item['a']}**.")
+            msg = await self.bot.wait_for("message", check=check, timeout=35)
+            if a.lower() in msg.content.lower():
+                await msg.reply(f"🎉 **Brilliant!** {msg.author.mention} solved the riddle! The answer was **{a}**! 🏆")
             else:
-                await ctx.send(f"❌ Time's up or incorrect! The answer was: **{item['a']}**.")
+                await ctx.send(f"❌ Not quite! The answer was: **{a}**.")
         except asyncio.TimeoutError:
-            await ctx.send(f"⏳ **Time's up!** The answer was: **{item['a']}**.")
+            await ctx.send(f"⏳ **Time's up!** The answer was: **{a}**.")
 
     @commands.command(name="guess_flag", description="Guess the country from the flag emoji")
     async def guess_flag(self, ctx):

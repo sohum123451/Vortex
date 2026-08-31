@@ -232,3 +232,40 @@ def role_guard(ctx, member: discord.Member):
     if ctx.guild.me.top_role <= member.top_role:
         return "❌ I cannot moderate this member because their highest role is equal to or higher than mine."
     return None
+
+# ==========================================================================
+# 🧠 SHARED GEMINI AI GENERATION ENGINE
+# ==========================================================================
+_gemini_client = None
+
+def get_gemini():
+    global _gemini_client
+    if _gemini_client is None:
+        key = os.getenv("GEMINI_API_KEY", "")
+        if key:
+            try:
+                from google import genai
+                _gemini_client = genai.Client(api_key=key).aio
+            except Exception:
+                pass
+    return _gemini_client
+
+async def generate_ai(prompt: str, system_instruction: str = None) -> str:
+    """Universal high-speed text generator with model fallbacks."""
+    client = get_gemini()
+    if not client:
+        raise Exception("Gemini API key is not configured.")
+
+    contents = f"{system_instruction}\n\n{prompt}" if system_instruction else prompt
+    for model_name in ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash"]:
+        try:
+            res = await client.models.generate_content(
+                model=model_name,
+                contents=contents,
+            )
+            if res and res.text:
+                return res.text.strip()
+        except Exception:
+            continue
+    raise Exception("AI generation failed across all available Gemini models.")
+

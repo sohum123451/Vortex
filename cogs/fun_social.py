@@ -23,7 +23,7 @@ class FunSocial(commands.Cog):
         ]
         await ctx.reply(f"🎱 **Question:** {question}\n🔮 **Answer:** {random.choice(res)}")
 
-    @commands.hybrid_command(name="ship", description="Calculate love compatibility between two members")
+    @commands.hybrid_command(name="ship", description="Calculate AI love compatibility and story between two members")
     async def ship(self, ctx, user1: discord.Member, user2: discord.Member = None):
         u2 = user2 or ctx.author
         combined = sorted([user1.id, u2.id])
@@ -34,17 +34,21 @@ class FunSocial(commands.Cog):
         bar_len = 10
         filled = int(percent / 10)
         bar = "💖" * filled + "🖤" * (bar_len - filled)
-        comment = (
-            "Soulmates destined forever! 💍" if percent >= 85
-            else "Great chemistry! 💕" if percent >= 60
-            else "Casual friendship territory! 🤝" if percent >= 35
-            else "Better stay away from each other! 🥀"
-        )
+
+        await ctx.defer()
+        prompt = f"Write a funny, charming 2-sentence love compatibility forecast for {user1.display_name} and {u2.display_name} whose compatibility score is {percent}%."
+        try:
+            story = await generate_ai(prompt, system_instruction="You are a funny relationship oracle.")
+        except Exception:
+            story = "Soulmates destined forever! 💍" if percent >= 85 else "Great chemistry! 💕" if percent >= 60 else "Casual friendship territory! 🤝" if percent >= 35 else "Better stay away from each other! 🥀"
+
         embed = discord.Embed(
-            title=f"💘 Love Compatibility: {user1.display_name} + {u2.display_name}",
-            description=f"**Compatibility Rating:** `{percent}%`\n{bar}\n\n*{comment}*",
+            title=f"💘 Love Match: {user1.display_name} + {u2.display_name}",
+            description=f"**Compatibility Rating:** `{percent}%`\n{bar}\n\n🔮 **AI Relationship Forecast:**\n*{story.strip()}*",
             color=discord.Color.magenta(),
+            timestamp=datetime.now(timezone.utc),
         )
+        embed.set_footer(text="Vortex Matchmaker • Powered by Gemini AI")
         await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name="meme", description="Get a trending meme from Reddit")
@@ -63,40 +67,50 @@ class FunSocial(commands.Cog):
             except Exception as e:
                 await ctx.reply(f"❌ Meme API error: {e}")
 
-    @commands.hybrid_command(name="joke", description="Get a random joke")
+    @commands.hybrid_command(name="joke", description="Get a freshly generated hilarious AI joke")
     async def joke(self, ctx):
-        jokes = [
-            "Why do programmers prefer dark mode? Because light attracts bugs!",
-            "Why do Java developers wear glasses? Because they don't C#!",
-            "There are 10 types of people in the world: those who understand binary, and those who don't.",
-            "How many programmers does it take to change a light bulb? None, it's a hardware problem!",
-            "Why was the JavaScript developer sad? Because they didn't know how to 'null' their feelings.",
-            "A SQL query walks into a bar, walks up to two tables and asks: 'Can I join you?'",
-        ]
-        await ctx.reply(f"😄 **{random.choice(jokes)}**")
+        await ctx.defer()
+        try:
+            res = await generate_ai("Tell a single hilarious, original stand-up joke. Make it genuinely funny and punchy. Return ONLY the joke.")
+            await ctx.reply(f"😄 **{res.strip()}**")
+        except Exception:
+            jokes = [
+                "Why do programmers prefer dark mode? Because light attracts bugs!",
+                "Why do Java developers wear glasses? Because they don't C#!",
+                "There are 10 types of people in the world: those who understand binary, and those who don't.",
+                "How many programmers does it take to change a light bulb? None, it's a hardware problem!",
+            ]
+            await ctx.reply(f"😄 **{random.choice(jokes)}**")
 
-    @commands.command(name="dadjoke", description="Get a classic dad joke")
+    @commands.hybrid_command(name="dadjoke", description="Get a fresh AI-generated cheesy dad joke")
     async def dadjoke(self, ctx):
-        dad_jokes = [
-            "I'm reading a book on anti-gravity. It's impossible to put down!",
-            "Did you hear about the guy who invented Lifesavers? They say he made a mint!",
-            "Why don't skeletons fight each other? They don't have the guts.",
-            "What do you call fake spaghetti? An impasta!",
-            "Want to hear a joke about paper? Never mind, it's tearable.",
-        ]
-        await ctx.reply(f"👨 **Dad Joke:** {random.choice(dad_jokes)}")
+        await ctx.defer()
+        try:
+            res = await generate_ai("Tell a single classic, cheesy, pun-filled dad joke. Return ONLY the joke.")
+            await ctx.reply(f"👨 **Dad Joke:** {res.strip()}")
+        except Exception:
+            dad_jokes = [
+                "I'm reading a book on anti-gravity. It's impossible to put down!",
+                "Did you hear about the guy who invented Lifesavers? They say he made a mint!",
+                "Why don't skeletons fight each other? They don't have the guts.",
+                "What do you call fake spaghetti? An impasta!",
+            ]
+            await ctx.reply(f"👨 **Dad Joke:** {random.choice(dad_jokes)}")
 
-    @commands.command(name="fact", description="Get a fascinating trivia fact")
+    @commands.hybrid_command(name="fact", description="Get a fascinating mind-blowing AI trivia fact")
     async def fact(self, ctx):
-        facts = [
-            "Honey never spoils. Archaeologists have found 3,000-year-old honey that is completely edible.",
-            "Octopuses have three hearts, nine brains, and blue blood.",
-            "The first computer bug was an actual real moth found trapped inside a Harvard Mark II computer in 1947.",
-            "Venus is the only planet in our solar system that spins clockwise.",
-            "Bananas are curved because they grow towards the sun against gravity (negative geotropism).",
-            "A cloud can weigh more than a million pounds.",
-        ]
-        await ctx.reply(f"🧠 **Fact:** {random.choice(facts)}")
+        await ctx.defer()
+        try:
+            res = await generate_ai("Tell a single fascinating, verified, mind-blowing science, history, or nature fact in 2 sentences. Return ONLY the fact.")
+            await ctx.reply(f"🧠 **Mind-Blowing Fact:**\n{res.strip()}")
+        except Exception:
+            facts = [
+                "Honey never spoils. Archaeologists have found 3,000-year-old honey that is completely edible.",
+                "Octopuses have three hearts, nine brains, and blue blood.",
+                "The first computer bug was an actual real moth found trapped inside a Harvard Mark II computer in 1947.",
+                "Venus is the only planet in our solar system that spins clockwise.",
+            ]
+            await ctx.reply(f"🧠 **Fact:** {random.choice(facts)}")
 
     @commands.command(name="choose", description="Choose between multiple options: &choose pizza, burger, tacos")
     async def choose(self, ctx, *, options: str):
@@ -153,31 +167,52 @@ class FunSocial(commands.Cog):
                 out.append(char)
         await ctx.reply(" ".join(out)[:2000])
 
-    @commands.command(name="wholesome", description="Give a wholesome compliment")
+    @commands.hybrid_command(name="wholesome", aliases=["compliment"], description="Give a personalized, uplifting AI compliment")
     async def wholesome(self, ctx, member: discord.Member = None):
         target = member or ctx.author
-        compliments = [
-            "Your positive energy lights up the entire server!",
-            "You have an amazing sense of humor!",
-            "You are smarter than you give yourself credit for!",
-            "You're a true champion and a great friend!",
-            "Your creativity inspires everyone around you!",
-        ]
-        await ctx.reply(f"💖 {target.mention}, {random.choice(compliments)}")
+        await ctx.defer()
+        try:
+            res = await generate_ai(f"Write a genuine, heartwarming, poetic 2-sentence compliment for {target.display_name}. Make it feel special and uplifting. Return ONLY the compliment.")
+            await ctx.reply(f"💖 {target.mention}, {res.strip()}")
+        except Exception:
+            compliments = [
+                "Your positive energy lights up the entire server!",
+                "You have an amazing sense of humor!",
+                "You are smarter than you give yourself credit for!",
+                "You're a true champion and a great friend!",
+            ]
+            await ctx.reply(f"💖 {target.mention}, {random.choice(compliments)}")
 
-    @commands.command(name="insult", description="Playful humorous roast / insult")
+    @commands.hybrid_command(name="insult", aliases=["roast_user"], description="Playful AI roast / savage insult")
     async def insult(self, ctx, member: discord.Member = None):
         target = member or ctx.author
-        insults = [
-            "You're the reason the instructions on shampoo bottles exist.",
-            "If I had a dollar for every smart thing you said, I'd be broke.",
-            "You bring everyone so much joy... whenever you leave the voice channel.",
-            "I'd agree with you but then we'd both be wrong.",
-        ]
-        await ctx.reply(f"🔥 {target.mention}, {random.choice(insults)}")
+        await ctx.defer()
+        try:
+            res = await generate_ai(f"Write a witty, savage, playful 1-sentence roast directed at {target.display_name}. Keep it PG-13 friendly for Discord but sharp and funny. Return ONLY the roast.")
+            await ctx.reply(f"🔥 {target.mention}, {res.strip()}")
+        except Exception:
+            insults = [
+                "You're the reason the instructions on shampoo bottles exist.",
+                "If I had a dollar for every smart thing you said, I'd be broke.",
+                "You bring everyone so much joy... whenever you leave the voice channel.",
+                "I'd agree with you but then we'd both be wrong.",
+            ]
+            await ctx.reply(f"🔥 {target.mention}, {random.choice(insults)}")
 
-    @commands.command(name="fortune", description="Crack open a fortune cookie")
+    @commands.hybrid_command(name="fortune", description="Crack open an AI mystic fortune cookie")
     async def fortune(self, ctx):
+        await ctx.defer()
+        try:
+            res = await generate_ai("Generate a mystic, thought-provoking fortune cookie message with a lucky lottery number and lucky word. Return in 2 short lines.")
+            embed = discord.Embed(title="🥠 Fortune Cookie", description=f"✨ *\"{res.strip()}\"*", color=0xF1C40F)
+            await ctx.reply(embed=embed)
+        except Exception:
+            fortunes = [
+                "A thrilling opportunity awaits you in the near future.\n🍀 Lucky number: 42",
+                "Your hard work will pay off sooner than you expect.\n🍀 Lucky number: 7",
+            ]
+            embed = discord.Embed(title="🥠 Fortune Cookie", description=f"✨ *\"{random.choice(fortunes)}\"*", color=0xF1C40F)
+            await ctx.reply(embed=embed)
         fortunes = [
             "A thrilling opportunity awaits you in the near future.",
             "Your hard work will pay off sooner than you expect.",
