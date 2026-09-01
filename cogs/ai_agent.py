@@ -582,15 +582,13 @@ Generate the `run` async function:"""
         try:
             exec(cleaned_code, env)
             run_func = env.get("run")
-            if not run_func or not callable(run_func):
+            if not callable(run_func):
                 return await msg.edit(content="❌ Failed to synthesize executable `run` function.")
 
             sys.stdout = stdout
             # Run with 15s timeout
-            result = await asyncio.wait_for(
-                run_func(ctx=ctx, bot=self.bot, db=get_db(), discord=discord, embed_color=MAIN_COLOR),
-                timeout=15.0
-            )
+            action_coro = run_func(ctx=ctx, bot=self.bot, db=get_db(), discord=discord, embed_color=MAIN_COLOR)
+            result = await asyncio.wait_for(action_coro, timeout=15.0)
             out_logs = stdout.getvalue().strip()
         except asyncio.TimeoutError:
             return await msg.edit(content="⏱️ **Action Timed Out:** The dynamic execution exceeded 15 seconds.")

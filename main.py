@@ -19,7 +19,7 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request, redirect, session
-from utils import DB_FILE, MAIN_COLOR, ERROR_COLOR
+from utils import DB_FILE, MAIN_COLOR, ERROR_COLOR, get_db
 
 load_dotenv()
 
