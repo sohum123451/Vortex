@@ -94,7 +94,7 @@ class RPGAdventure(commands.Cog):
             cur.execute(query, vals)
             conn.commit()
 
-    @commands.hybrid_command(name="rpg_profile", description="View your RPG hero stats, equipment, and level")
+    @commands.command(name="rpg_profile", description="View your RPG hero stats, equipment, and level")
     async def rpg_profile(self, ctx, member: discord.Member = None):
         target = member or ctx.author
         cls, lvl, xp, hp, max_hp, atk, df, coins, weapon, armor, pet, floor = self.get_player(str(target.id))
@@ -144,7 +144,7 @@ class RPGAdventure(commands.Cog):
             )
         await ctx.reply(embed=embed)
 
-    @commands.hybrid_command(name="hunt_monster", description="Hunt wild monsters in the wilderness for Gold & XP")
+    @commands.command(name="hunt_monster", description="Hunt wild monsters in the wilderness for Gold & XP")
     @commands.cooldown(1, 30, commands.BucketType.user)
     async def hunt_monster(self, ctx):
         uid = str(ctx.author.id)

@@ -78,7 +78,7 @@ class Utility(commands.Cog):
         embed.set_image(url=user.banner.url)
         await ctx.reply(embed=embed)
 
-    @commands.hybrid_command(name="calc", description="Safe math calculator: &calc 5 * (10 + 2)")
+    @commands.command(name="calc", description="Safe math calculator: &calc 5 * (10 + 2)")
     async def calc(self, ctx, *, expression: str):
         allowed = set("0123456789+-*/().^% ")
         if not set(expression).issubset(allowed):
@@ -139,14 +139,14 @@ class Utility(commands.Cog):
             except Exception as e:
                 await ctx.reply(f"❌ Crypto error: {e}")
 
-    @commands.hybrid_command(name="qr", description="Generate a QR code: &qr https://discord.com")
+    @commands.command(name="qr", description="Generate a QR code: &qr https://discord.com")
     async def qr(self, ctx, *, text: str):
         url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={urllib.parse.quote(text)}"
         embed = discord.Embed(title="📱 Generated QR Code", color=MAIN_COLOR)
         embed.set_image(url=url)
         await ctx.reply(embed=embed)
 
-    @commands.hybrid_command(name="wiki", description="Search Wikipedia: &wiki Python")
+    @commands.command(name="wiki", description="Search Wikipedia: &wiki Python")
     async def wiki(self, ctx, *, query: str):
         await ctx.defer()
         url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(query)}"

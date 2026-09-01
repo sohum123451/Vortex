@@ -20,7 +20,7 @@ class SoundboardTTS(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.hybrid_command(name="tts_url", description="Generate a Text-to-Speech audio link for any text")
+    @commands.command(name="tts_url", description="Generate a Text-to-Speech audio link for any text")
     async def tts_url(self, ctx, *, text: str):
         encoded = urllib.parse.quote(text[:200])
         url = f"https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q={encoded}&tl=en"

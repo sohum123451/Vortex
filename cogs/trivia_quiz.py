@@ -162,7 +162,7 @@ class TriviaQuiz(commands.Cog):
         view = TriviaView(ctx.author, c, opts)
         await ctx.reply(embed=embed, view=view)
 
-    @commands.hybrid_command(name="ai_trivia", aliases=["aitrivia", "custom_trivia"], description="Play an AI-generated trivia game on ANY custom topic: &ai_trivia [topic]")
+    @commands.command(name="ai_trivia", aliases=["aitrivia", "custom_trivia"], description="Play an AI-generated trivia game on ANY custom topic: &ai_trivia [topic]")
     async def ai_trivia(self, ctx, *, topic: str = "General Knowledge"):
         """Generates dynamic 4-option trivia with interactive Discord buttons on any topic."""
         await ctx.defer()
@@ -209,7 +209,7 @@ Respond in strict JSON format:
             else:
                 await ctx.reply("❌ Trivia server is temporarily busy.")
 
-    @commands.hybrid_command(name="riddle", description="Solve a mind-bending AI riddle")
+    @commands.command(name="riddle", description="Solve a mind-bending AI riddle")
     async def riddle(self, ctx):
         await ctx.defer()
         from utils import generate_ai

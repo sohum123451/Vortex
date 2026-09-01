@@ -200,7 +200,7 @@ class Minigames(commands.Cog):
     # 🧠 AI-POWERED TRUTH OR DARE & DILEMMAS
     # =========================================================================
 
-    @commands.hybrid_command(name="truth", aliases=["ai_truth"], description="Generate a spicy, unique AI-powered Truth question")
+    @commands.command(name="truth", aliases=["ai_truth"], description="Generate a spicy, unique AI-powered Truth question")
     async def truth_standalone(self, ctx):
         """Generate a fresh, hilarious, and thought-provoking Truth question with Gemini AI."""
         await ctx.defer()
@@ -220,7 +220,7 @@ class Minigames(commands.Cog):
         embed.set_footer(text=f"Requested by {ctx.author.display_name} • Powered by Gemini AI")
         await ctx.reply(embed=embed)
 
-    @commands.hybrid_command(name="dare", aliases=["ai_dare"], description="Generate a spicy, funny AI-powered Dare challenge")
+    @commands.command(name="dare", aliases=["ai_dare"], description="Generate a spicy, funny AI-powered Dare challenge")
     async def dare_standalone(self, ctx):
         """Generate a fresh, hilarious, and creative Dare challenge with Gemini AI."""
         await ctx.defer()
@@ -240,7 +240,7 @@ class Minigames(commands.Cog):
         embed.set_footer(text=f"Requested by {ctx.author.display_name} • Powered by Gemini AI")
         await ctx.reply(embed=embed)
 
-    @commands.hybrid_command(name="wyr", aliases=["wouldyourather", "dilemma"], description="Generate an AI-powered Would You Rather dilemma with interactive voting buttons")
+    @commands.command(name="wyr", aliases=["wouldyourather", "dilemma"], description="Generate an AI-powered Would You Rather dilemma with interactive voting buttons")
     async def would_you_rather(self, ctx):
         """Generates a dynamic 2-choice dilemma with live reaction buttons."""
         await ctx.defer()
@@ -411,8 +411,8 @@ class Minigames(commands.Cog):
         await message.channel.send(f"Next letter is: **{end_letter.upper()}** 🎵")
 
     # AI Tarot & Horoscope
-    @commands.hybrid_command(name="tarot", description="Draw an AI-interpreted mystical Tarot card reading")
-    async def tarot(self, ctx):
+    @commands.command(name="tarot", description="Draw an AI-interpreted mystical Tarot card reading")
+    async def tarot_card(self, ctx):
         arcana = [
             ("The Fool", "🃏"), ("The Magician", "✨"), ("The High Priestess", "🌙"),
             ("The Empress", "👑"), ("The Emperor", "🏛️"), ("The Hierophant", "📜"),
@@ -438,7 +438,7 @@ class Minigames(commands.Cog):
         embed.set_footer(text=f"Drawn for {ctx.author.display_name} • Powered by Gemini AI")
         await ctx.reply(embed=embed)
 
-    @commands.hybrid_command(name="horoscope", description="Daily AI astrological horoscope: &horoscope <aries/taurus/gemini...>")
+    @commands.command(name="horoscope", description="Daily AI astrological horoscope: &horoscope <aries/taurus/gemini...>")
     async def horoscope(self, ctx, sign: str):
         s = sign.lower().strip()
         signs = ["aries", "taurus", "gemini", "cancer", "leo", "virgo", "libra", "scorpio", "sagittarius", "capricorn", "aquarius", "pisces"]

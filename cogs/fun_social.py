@@ -167,7 +167,7 @@ class FunSocial(commands.Cog):
                 out.append(char)
         await ctx.reply(" ".join(out)[:2000])
 
-    @commands.hybrid_command(name="wholesome", aliases=["compliment"], description="Give a personalized, uplifting AI compliment")
+    @commands.command(name="wholesome", aliases=["heartwarming", "uplift"], description="Give a personalized, uplifting AI compliment")
     async def wholesome(self, ctx, member: discord.Member = None):
         target = member or ctx.author
         await ctx.defer()

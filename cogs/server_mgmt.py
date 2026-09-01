@@ -68,7 +68,7 @@ class ServerManagement(commands.Cog):
             await poll_msg.add_reaction(emojis[i])
 
     # Sticky Messages
-    @commands.hybrid_command(name="sticky", description="Set a sticky message that stays at the bottom of channel")
+    @commands.command(name="sticky", description="Set a sticky message that stays at the bottom of channel")
     @commands.has_permissions(manage_messages=True)
     async def sticky(self, ctx, *, text: str):
         with sqlite3.connect(DB_FILE) as conn:
@@ -80,7 +80,7 @@ class ServerManagement(commands.Cog):
             conn.commit()
         await ctx.reply(f"📌 Sticky message set for {ctx.channel.mention}!")
 
-    @commands.hybrid_command(name="unsticky", description="Remove sticky message from channel")
+    @commands.command(name="unsticky", description="Remove sticky message from channel")
     @commands.has_permissions(manage_messages=True)
     async def unsticky(self, ctx):
         with sqlite3.connect(DB_FILE) as conn:

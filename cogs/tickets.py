@@ -86,7 +86,7 @@ class Tickets(commands.Cog):
         await ctx.channel.set_permissions(member, overwrite=None)
         await ctx.reply(f"❌ Removed {member.mention} from this ticket.")
 
-    @commands.hybrid_command(name="ticket_close", description="Close and delete the current ticket channel")
+    @commands.command(name="ticket_close", description="Close and delete the current ticket channel")
     @commands.has_permissions(manage_channels=True)
     async def ticket_close(self, ctx):
         if not ctx.channel.name.startswith("ticket-"):

@@ -57,7 +57,7 @@ class ServerAnalytics(commands.Cog):
         key = (str(message.guild.id), str(message.author.id), today)
         self.buffer[key] = self.buffer.get(key, 0) + 1
 
-    @commands.hybrid_command(name="server_activity", description="View server message activity breakdown")
+    @commands.command(name="server_activity", description="View server message activity breakdown")
     async def server_activity(self, ctx):
         if not ctx.guild:
             return await ctx.reply("❌ This command must be used in a server.")

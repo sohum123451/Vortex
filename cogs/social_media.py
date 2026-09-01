@@ -12,7 +12,7 @@ class SocialMedia(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.hybrid_command(name="github_user", description="Lookup a GitHub developer profile")
+    @commands.command(name="github_user", description="Lookup a GitHub developer profile")
     async def github_user(self, ctx, username: str):
         await ctx.defer()
         url = f"https://api.github.com/users/{urllib.parse.quote(username)}"
@@ -39,7 +39,7 @@ class SocialMedia(commands.Cog):
                 pass
         await ctx.reply(f"❌ Could not find GitHub user `{username}`.")
 
-    @commands.hybrid_command(name="github_repo", description="Lookup a GitHub open-source repository")
+    @commands.command(name="github_repo", description="Lookup a GitHub open-source repository")
     async def github_repo(self, ctx, owner: str, repo: str):
         await ctx.defer()
         url = f"https://api.github.com/repos/{urllib.parse.quote(owner)}/{urllib.parse.quote(repo)}"
