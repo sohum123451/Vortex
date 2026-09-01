@@ -292,7 +292,7 @@ def get_groq():
                 pass
     return _groq_client
 
-async def _call_nvidia(prompt: str, system_instruction: str = None, model: str = "nvidia/nemotron-4-340b-instruct") -> str:
+async def _call_nvidia(prompt: str, system_instruction: str = None, model: str = None) -> str:
     """Enterprise AI inference powered by NVIDIA NIM."""
     api_key = os.getenv("NVIDIA_API_KEY", "")
     if not api_key:
@@ -308,19 +308,30 @@ async def _call_nvidia(prompt: str, system_instruction: str = None, model: str =
         messages.append({"role": "system", "content": system_instruction})
     messages.append({"role": "user", "content": prompt})
 
-    payload = {
-        "model": model,
-        "messages": messages,
-        "temperature": 0.6,
-        "max_tokens": 1800,
-    }
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=20)) as resp:
-            if resp.status == 200:
-                data = await resp.json()
-                if data.get("choices") and data["choices"][0].get("message"):
-                    return data["choices"][0]["message"]["content"].strip()
-    raise Exception(f"NVIDIA NIM model {model} failed.")
+    target_models = [model] if model else [
+        "meta/llama-3.2-11b-vision-instruct",
+        "nvidia/nemotron-3-nano-30b-a3b",
+        "nvidia/nemotron-3-super-120b-a12b",
+        "nvidia/nemotron-3-ultra-550b-a55b"
+    ]
+
+    for m in target_models:
+        payload = {
+            "model": m,
+            "messages": messages,
+            "temperature": 0.6,
+            "max_tokens": 1800,
+        }
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(url, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        if data.get("choices") and data["choices"][0].get("message"):
+                            return data["choices"][0]["message"]["content"].strip()
+            except Exception:
+                continue
+    raise Exception("All NVIDIA NIM model endpoints failed.")
 
 def _clean_cache():
     """Prune expired items from memory cache."""
