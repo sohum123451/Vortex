@@ -310,8 +310,8 @@ async def _call_nvidia(prompt: str, system_instruction: str = None, model: str =
 
     target_models = [model] if model else [
         "meta/llama-3.2-11b-vision-instruct",
+        "google/diffusiongemma-26b-a4b-it",
         "nvidia/nemotron-3-nano-30b-a3b",
-        "nvidia/nemotron-3-super-120b-a12b",
         "nvidia/nemotron-3-ultra-550b-a55b"
     ]
 
