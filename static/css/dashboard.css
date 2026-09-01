@@ -80,6 +80,31 @@ button, input, select, textarea {
     background: transparent;
 }
 
+/* 🎛️ High-Contrast Universal Form Elements & Dropdowns */
+select, input[type="text"], input[type="password"], input[type="number"], textarea {
+    background-color: #131622 !important;
+    color: #FFFFFF !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: var(--radius-sm) !important;
+    padding: 10px 14px !important;
+    font-size: 0.92rem !important;
+    font-family: var(--font-body) !important;
+    transition: all 0.2s ease !important;
+}
+
+select:focus, input:focus, textarea:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.25) !important;
+    outline: none !important;
+}
+
+select option {
+    background-color: #10121A !important;
+    color: #FFFFFF !important;
+    padding: 10px !important;
+    font-size: 0.92rem !important;
+}
+
 button {
     cursor: pointer;
 }

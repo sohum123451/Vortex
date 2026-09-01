@@ -559,17 +559,17 @@
                         <p style="color: var(--color-muted); font-size: 0.9rem; margin-bottom: 1rem;">Customize level-up message templates, destination channel, or toggle notifications.</p>
                         
                         <form id="level-config-form" onsubmit="event.preventDefault(); saveLevelConfig();">
-                            <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
-                                <div style="flex: 1; min-width: 200px;">
-                                    <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem;">Notification Status</label>
-                                    <select id="level-status-select" style="width: 100%; padding: 0.6rem; background: var(--bg-tertiary); color: var(--text-normal); border: 1px solid var(--border-subtle); border-radius: 6px;">
+                            <div style="display: flex; gap: 1.2rem; flex-wrap: wrap; margin-bottom: 1.2rem;">
+                                <div style="flex: 1; min-width: 220px;">
+                                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 0.4rem;">Notification Status</label>
+                                    <select id="level-status-select" style="width: 100%;">
                                         <option value="enabled">Enabled 🔔</option>
                                         <option value="disabled">Disabled 🔕</option>
                                     </select>
                                 </div>
-                                <div style="flex: 1; min-width: 200px;">
-                                    <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem;">Announcement Channel</label>
-                                    <select id="level-channel-select" style="width: 100%; padding: 0.6rem; background: var(--bg-tertiary); color: var(--text-normal); border: 1px solid var(--border-subtle); border-radius: 6px;">
+                                <div style="flex: 1; min-width: 220px;">
+                                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 0.4rem;">Announcement Channel</label>
+                                    <select id="level-channel-select" style="width: 100%;">
                                         <option value="current">Current Chat Channel</option>
                                         <option value="dm">Direct Message (DM)</option>
                                         <option value="disabled">Disabled</option>
@@ -577,15 +577,15 @@
                                 </div>
                             </div>
 
-                            <div style="margin-bottom: 1rem;">
-                                <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem;">Custom Level-Up Template</label>
-                                <input type="text" id="level-template-input" value="🎉 **Level Up!** Congratulations {user}, you reached **Level {level}**! ⭐" style="width: 100%; padding: 0.6rem; background: var(--bg-tertiary); color: var(--text-normal); border: 1px solid var(--border-subtle); border-radius: 6px; font-family: monospace;">
-                                <div style="font-size: 0.8rem; color: var(--color-muted); margin-top: 0.4rem;">Available Tags: <code>{user}</code> <code>{level}</code> <code>{xp}</code> <code>{server}</code></div>
+                            <div style="margin-bottom: 1.2rem;">
+                                <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 0.4rem;">Custom Level-Up Template</label>
+                                <input type="text" id="level-template-input" value="🎉 **Level Up!** Congratulations {user}, you reached **Level {level}**! ⭐" style="width: 100%; font-family: monospace;">
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.4rem;">Available Tags: <code>{user}</code> <code>{level}</code> <code>{xp}</code> <code>{server}</code></div>
                             </div>
 
                             <div style="display: flex; align-items: center; justify-content: space-between;">
-                                <span id="level-config-status" style="font-size: 0.85rem; font-weight: 500;"></span>
-                                <button type="submit" style="padding: 0.6rem 1.2rem; background: var(--color-primary); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Save Settings</button>
+                                <span id="level-config-status" style="font-size: 0.85rem; font-weight: 600;"></span>
+                                <button type="submit" style="padding: 10px 22px; background: linear-gradient(135deg, var(--primary) 0%, #4752C4 100%); color: white; border: none; border-radius: var(--radius-sm); font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px var(--primary-glow);">Save Settings</button>
                             </div>
                         </form>
                     </div>
