@@ -485,6 +485,9 @@ Available Globals & Arguments in `run()`:
 - `discord`: discord module
 - `embed_color`: default brand color
 
+Special Intent Handling:
+- If the user asks to "make this server a support server" or "setup support HQ", you can delegate by calling `await bot.get_cog('ServerManagement').setup_support_server_cmd(ctx)` or create the official '⚡ VORTEX SUPPORT HQ' category with announcements, rules, tickets, and bot-commands channels!
+
 Safety & Scope Rules:
 - User is {'BOT OWNER (Full Access)' if is_owner else 'SERVER ADMIN (Guild-scoped actions only)'}.
 - If Server Admin: ONLY perform server operations on `ctx.guild` (channels, roles, messages, kicks, bans, timeouts, embeds, server economy/stats). DO NOT access OS files, subprocess, or bot tokens.
@@ -506,7 +509,7 @@ User Instruction:
 Generate the `run` async function:"""
 
         try:
-            ai_code = await self._call_gemini(user_content, system_instruction=system_instruction)
+            ai_code = await self._call_ai(user_content, system_instruction=system_instruction)
             cleaned_code = self._clean_code_fence(ai_code)
         except Exception as e:
             return await msg.edit(content=f"❌ **AI Synthesis Error:** {e}")
