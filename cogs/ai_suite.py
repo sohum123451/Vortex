@@ -18,24 +18,75 @@ class AISuite(commands.Cog):
         self.active_vai_users = set()
         self.user_memory = {}
 
-    async def generate_ai(self, prompt: str, system_instruction: str = None):
-        """Helper to generate text using Gemini 3.6 Flash with fallback."""
-        if not self.gemini:
-            raise Exception("Gemini API key is not configured.")
+    async def generate_ai(self, prompt: str, system_instruction: str = None, max_tokens: int = 1500) -> str:
+        """Bulletproof Multi-Cloud AI Router with automatic failover across NVIDIA NIM, Groq, Google Gemini, and Pollinations."""
+        # Tier 1: NVIDIA NIM (Nemotron 120B / LLaMA 3.2 11B / Nemotron 340B)
+        nv_key = os.getenv("NVIDIA_API_KEY")
+        if nv_key:
+            for model in ["nvidia/nemotron-3-super-120b-a12b", "meta/llama-3.2-11b-vision-instruct", "nvidia/nemotron-4-340b-instruct"]:
+                try:
+                    headers = {"Authorization": f"Bearer {nv_key}", "Content-Type": "application/json"}
+                    messages = []
+                    if system_instruction:
+                        messages.append({"role": "system", "content": system_instruction})
+                    messages.append({"role": "user", "content": prompt})
+                    payload = {"model": model, "messages": messages, "max_tokens": max_tokens, "temperature": 0.6}
+                    async with aiohttp.ClientSession() as session:
+                        async with session.post("https://integrate.api.nvidia.com/v1/chat/completions", headers=headers, json=payload, timeout=12) as resp:
+                            if resp.status == 200:
+                                data = await resp.json()
+                                content = data["choices"][0]["message"]["content"]
+                                if content and content.strip():
+                                    return content.strip()
+                except Exception:
+                    continue
 
-        contents = f"{system_instruction}\n\n{prompt}" if system_instruction else prompt
+        # Tier 2: Groq LPUs (Active: gpt-oss-120b, qwen3.8-27b, qwen3.6-27b)
+        if self.groq:
+            for model in ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "qwen/qwen3.6-27b", "openai/gpt-oss-20b"]:
+                try:
+                    messages = []
+                    if system_instruction:
+                        messages.append({"role": "system", "content": system_instruction})
+                    messages.append({"role": "user", "content": prompt})
+                    res = await self.groq.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        max_tokens=max_tokens,
+                        temperature=0.6,
+                    )
+                    if res and res.choices and res.choices[0].message.content:
+                        return res.choices[0].message.content.strip()
+                except Exception:
+                    continue
+
+        # Tier 3: Google Gemini (Active: gemini-3.7-flash, gemini-3.6-flash, gemini-flash-latest)
+        if self.gemini:
+            contents = f"{system_instruction}\n\n{prompt}" if system_instruction else prompt
+            for model in ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-flash-latest", "gemini-2.5-flash-lite"]:
+                try:
+                    res = await self.gemini.models.generate_content(
+                        model=model,
+                        contents=contents,
+                    )
+                    if res and res.text:
+                        return res.text.strip()
+                except Exception:
+                    continue
+
+        # Tier 4: Keyless Pollinations Fallback
         try:
-            res = await self.gemini.models.generate_content(
-                model="gemini-3.6-flash",
-                contents=contents,
-            )
-            return res.text.strip()
+            url = f"https://text.pollinations.ai/{aiohttp.helpers.quote(prompt[:400])}"
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=10) as resp:
+                    if resp.status == 200:
+                        text = await resp.text()
+                        if text and text.strip():
+                            return text.strip()
         except Exception:
-            res = await self.gemini.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=contents,
-            )
-            return res.text.strip()
+            pass
+
+        raise Exception("All multi-cloud AI providers (NVIDIA NIM, Groq, Gemini, Pollinations) are currently unavailable.")
 
     @commands.hybrid_command(name="chat", description="Chat with high-speed Gemini 3.6 AI")
     async def chat(self, ctx, *, prompt: str):

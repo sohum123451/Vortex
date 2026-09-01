@@ -12,30 +12,92 @@ from discord.ext import commands
 from google import genai
 from utils import DB_FILE, get_db, MAIN_COLOR, SUCCESS_COLOR, ERROR_COLOR, WARN_COLOR, INFO_COLOR
 
+import aiohttp
+from groq import AsyncGroq
+
 class AIAgent(commands.Cog):
-    """Autonomous AI Agent for real-time Discord code modification and zero-shot dynamic actions."""
+    """Autonomous AI Agent for real-time Discord code modification, self-healing, and zero-shot dynamic actions."""
 
     def __init__(self, bot):
         self.bot = bot
         gemini_key = os.getenv("GEMINI_API_KEY", "")
         self.gemini = genai.Client(api_key=gemini_key).aio if gemini_key else None
+        groq_key = os.getenv("GROQ_API_KEY", "")
+        self.groq = AsyncGroq(api_key=groq_key) if groq_key else None
         self.backup_history = {}  # filepath -> backup_path
 
-    async def _call_gemini(self, prompt: str, system_instruction: str = "") -> str:
-        if not self.gemini:
-            raise Exception("Gemini API client is not configured. Please set GEMINI_API_KEY.")
-        contents = f"{system_instruction}\n\n{prompt}" if system_instruction else prompt
-        for model_name in ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash"]:
-            try:
-                res = await self.gemini.models.generate_content(
-                    model=model_name,
-                    contents=contents,
-                )
-                if res and res.text:
-                    return res.text.strip()
-            except Exception:
-                continue
-        raise Exception("All Gemini models failed to generate response.")
+    async def _call_ai(self, prompt: str, system_instruction: str = "") -> str:
+        """Bulletproof multi-cloud AI inference router for code generation and self-healing."""
+        # Tier 1: NVIDIA NIM (Nemotron 120B / LLaMA 3.2 11B / Nemotron 340B)
+        nv_key = os.getenv("NVIDIA_API_KEY")
+        if nv_key:
+            for model in ["nvidia/nemotron-3-super-120b-a12b", "meta/llama-3.2-11b-vision-instruct", "nvidia/nemotron-4-340b-instruct"]:
+                try:
+                    headers = {"Authorization": f"Bearer {nv_key}", "Content-Type": "application/json"}
+                    messages = []
+                    if system_instruction:
+                        messages.append({"role": "system", "content": system_instruction})
+                    messages.append({"role": "user", "content": prompt})
+                    payload = {"model": model, "messages": messages, "max_tokens": 2500, "temperature": 0.3}
+                    async with aiohttp.ClientSession() as session:
+                        async with session.post("https://integrate.api.nvidia.com/v1/chat/completions", headers=headers, json=payload, timeout=18) as resp:
+                            if resp.status == 200:
+                                data = await resp.json()
+                                content = data["choices"][0]["message"]["content"]
+                                if content and content.strip():
+                                    return content.strip()
+                except Exception:
+                    continue
+
+        # Tier 2: Groq LPUs (gpt-oss-120b, qwen3.8-27b)
+        if self.groq:
+            for model in ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "qwen/qwen3.6-27b"]:
+                try:
+                    messages = []
+                    if system_instruction:
+                        messages.append({"role": "system", "content": system_instruction})
+                    messages.append({"role": "user", "content": prompt})
+                    res = await self.groq.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        max_tokens=2500,
+                        temperature=0.3,
+                    )
+                    if res and res.choices and res.choices[0].message.content:
+                        return res.choices[0].message.content.strip()
+                except Exception:
+                    continue
+
+        # Tier 3: Google Gemini
+        if self.gemini:
+            contents = f"{system_instruction}\n\n{prompt}" if system_instruction else prompt
+            for model in ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-flash-latest"]:
+                try:
+                    res = await self.gemini.models.generate_content(
+                        model=model,
+                        contents=contents,
+                    )
+                    if res and res.text:
+                        return res.text.strip()
+                except Exception:
+                    continue
+
+        # Tier 4: Keyless Pollinations Fallback
+        try:
+            url = f"https://text.pollinations.ai/{aiohttp.helpers.quote(prompt[:400])}"
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=10) as resp:
+                    if resp.status == 200:
+                        text = await resp.text()
+                        if text and text.strip():
+                            return text.strip()
+        except Exception:
+            pass
+
+        raise Exception("All AI engines (NVIDIA NIM, Groq, Gemini, Pollinations) are currently unavailable.")
+
+    # Compatibility alias
+    _call_gemini = _call_ai
 
     def _clean_code_fence(self, text: str) -> str:
         text = text.strip()
@@ -940,6 +1002,170 @@ Output the updated file content:"""
         )
         embed.set_footer(text="Vortex Continuous Self-Evolution History")
         await ctx.reply(embed=embed)
+
+    # =========================================================================
+    # 🩺 6. AUTONOMOUS SELF-HEALING & AUTO-REPAIR ENGINE (&autofix, &heal)
+    # =========================================================================
+
+    @commands.Cog.listener()
+    async def on_command_failed_telemetry(self, ctx, error):
+        """Captures failed command executions into ML telemetry for autonomous learning."""
+        try:
+            cmd_name = ctx.command.qualified_name if ctx.command else "unknown"
+            err_msg = str(error)
+            err_type = type(error).__name__
+            tb_str = "".join(traceback.format_exception(type(error), error, error.__traceback__)) if hasattr(error, '__traceback__') else err_msg
+
+            with get_db() as db:
+                db.execute(
+                    "INSERT INTO bot_error_telemetry (guild_id, user_id, command_name, error_type, error_msg, traceback, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        str(ctx.guild.id if ctx.guild else "DM"),
+                        str(ctx.author.id),
+                        cmd_name,
+                        err_type,
+                        err_msg[:500],
+                        tb_str[:3000],
+                        datetime.now(timezone.utc).isoformat()
+                    )
+                )
+                db.commit()
+        except Exception as e:
+            print(f"Error logging failed telemetry: {e}", flush=True)
+
+    @commands.command(name="autofix", aliases=["heal", "fixerror", "autorepair"], description="[Owner] Use Multi-Cloud AI to autonomously diagnose and repair the last failed command")
+    async def auto_fix_command(self, ctx, *, specific_command: str = None):
+        """Analyzes the latest command crash in telemetry, synthesizes a fix, compiles AST, and hot-reloads live."""
+        if not await self.is_bot_admin(ctx.author):
+            return await ctx.reply("🔒 **Restricted:** The `&autofix` repair engine is exclusive to the Bot Creator.")
+
+        msg = await ctx.reply("🩺 **Vortex Auto-Repair & ML Engine**\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🟡 `[Step 1/4]` Inspecting error telemetry...")
+
+        with get_db() as db:
+            if specific_command:
+                row = db.execute(
+                    "SELECT command_name, error_type, error_msg, traceback, timestamp FROM bot_error_telemetry WHERE command_name LIKE ? ORDER BY id DESC LIMIT 1",
+                    (f"%{specific_command}%",)
+                ).fetchone()
+            else:
+                row = db.execute(
+                    "SELECT command_name, error_type, error_msg, traceback, timestamp FROM bot_error_telemetry ORDER BY id DESC LIMIT 1"
+                ).fetchone()
+
+        if not row:
+            return await msg.edit(content="✅ **No Recent Crash Found:** No unhandled command errors were recorded in telemetry. All systems operational!")
+
+        cmd_name = row['command_name']
+        err_type = row['error_type']
+        err_msg = row['error_msg']
+        tb = row['traceback']
+
+        await msg.edit(content=(
+            "🩺 **Vortex Auto-Repair & ML Engine**\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"🟢 `[Step 1/4]` Crash found in `&{cmd_name}` ({err_type})\n"
+            "🟡 `[Step 2/4]` **Diagnosing Root Cause** — Multi-Cloud AI analyzing stack trace...\n"
+            "⚪ `[Step 3/4]` Applying patch & testing AST syntax\n"
+            "⚪ `[Step 4/4]` Complete"
+        ))
+
+        base_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+        cogs_dir = os.path.join(base_dir, "cogs")
+        all_cogs = [f for f in os.listdir(cogs_dir) if f.endswith(".py") and not f.startswith("__")]
+
+        # Determine target file
+        target_file = None
+        for cog_file in all_cogs:
+            if cog_file[:-3] in cmd_name or cmd_name in cog_file[:-3]:
+                target_file = f"cogs/{cog_file}"
+                break
+        if not target_file:
+            # Search traceback for cog filename
+            for cog_file in all_cogs:
+                if cog_file in tb:
+                    target_file = f"cogs/{cog_file}"
+                    break
+        if not target_file:
+            target_file = "cogs/ai_suite.py" if "ai" in cmd_name.lower() else "cogs/utility.py"
+
+        target_abs = os.path.join(base_dir, target_file)
+        current_code = ""
+        if os.path.exists(target_abs):
+            with open(target_abs, "r", encoding="utf-8") as f:
+                current_code = f.read()
+
+        prompt = f"""You are a master Python / Discord.py bug-fixing engineer.
+A command '{cmd_name}' crashed in Discord with this error:
+Error: {err_type}: {err_msg}
+
+Traceback:
+{tb}
+
+Target File: {target_file}
+Current File Code:
+```python
+{current_code}
+```
+
+Task:
+1. Fix the bug causing the crash in '{cmd_name}'. Ensure robust try/except or fallback handling so it NEVER crashes.
+2. Maintain all existing commands and functions in the file.
+3. Output ONLY the complete, 100% updated drop-in python file inside ```python ... ``` without external explanation.
+"""
+
+        try:
+            ai_out = await self._call_ai(prompt, system_instruction="You are a senior automated code repair agent.")
+            new_code = self._clean_code_fence(ai_out)
+        except Exception as e:
+            return await msg.edit(content=f"❌ AI Diagnosis Failed: {e}")
+
+        await msg.edit(content=(
+            "🩺 **Vortex Auto-Repair & ML Engine**\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"🟢 `[Step 1/4]` Crash found in `&{cmd_name}` ({err_type})\n"
+            f"🟢 `[Step 2/4]` Root cause identified & patch generated\n"
+            f"🟡 `[Step 3/4]` **Compiling AST & Hot-Reloading** — Injecting fix into `{target_file}`...\n"
+            "⚪ `[Step 4/4]` Complete"
+        ))
+
+        # Backup & AST check
+        bak_path = f"{target_abs}.bak_{int(datetime.now().timestamp())}"
+        shutil.copyfile(target_abs, bak_path)
+        self.backup_history[target_abs] = bak_path
+
+        try:
+            compile(new_code, target_abs, "exec")
+        except SyntaxError as syn:
+            shutil.copyfile(bak_path, target_abs)
+            return await msg.edit(content=f"❌ Generated code had syntax error: {syn}. Rolled back.")
+
+        with open(target_abs, "w", encoding="utf-8") as f:
+            f.write(new_code)
+
+        # Hot reload cog
+        ext = f"cogs.{os.path.basename(target_file)[:-3]}"
+        reload_status = "Reloaded"
+        try:
+            if ext in self.bot.extensions:
+                await self.bot.reload_extension(ext)
+            else:
+                await self.bot.load_extension(ext)
+        except Exception as re:
+            reload_status = f"Reload notice: {re}"
+
+        embed = discord.Embed(
+            title="🩺 Autonomous Repair Applied Successfully!",
+            description=(
+                f"**Repaired Command:** `&{cmd_name}`\n"
+                f"**Resolved Error:** `{err_type}: {err_msg[:120]}`\n"
+                f"**Patched File:** `{target_file}`\n"
+                f"**Status:** ✅ {reload_status}"
+            ),
+            color=SUCCESS_COLOR,
+            timestamp=datetime.now(timezone.utc),
+        )
+        embed.set_footer(text="Vortex Autonomous Machine Learning & Auto-Repair Pipeline")
+        await msg.edit(content=None, embed=embed)
 
 
 # =========================================================================

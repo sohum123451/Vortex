@@ -840,6 +840,18 @@ def init_db():
                 prefix TEXT NOT NULL
             )
         """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS bot_error_telemetry (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id TEXT,
+                user_id TEXT,
+                command_name TEXT,
+                error_type TEXT,
+                error_msg TEXT,
+                traceback TEXT,
+                timestamp TEXT NOT NULL
+            )
+        """)
 
         # Auto-migrate missing columns for existing economy table
         cur.execute("PRAGMA table_info(economy)")
@@ -940,21 +952,43 @@ class ErrorHandler(commands.Cog):
             return await ctx.reply(f"❌ **Invalid Argument:** {error}")
 
         import traceback
+        tb_str = traceback.format_exc()
         self.bot._last_error_log = {
             "command": str(ctx.command),
             "user": str(ctx.author),
             "error": str(orig_error),
-            "trace": traceback.format_exc(),
+            "trace": tb_str,
             "time": datetime.now(timezone.utc),
         }
         print(f"Unhandled Error in {ctx.command}: {orig_error}", flush=True)
+
+        # 🧬 Auto-ML & Self-Healing Telemetry Logging
+        try:
+            with sqlite3.connect(DB_FILE) as conn:
+                conn.cursor().execute(
+                    "INSERT INTO bot_error_telemetry (guild_id, user_id, command_name, error_type, error_msg, traceback, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        str(ctx.guild.id if ctx.guild else "DM"),
+                        str(ctx.author.id),
+                        str(ctx.command.qualified_name if ctx.command else "unknown"),
+                        type(orig_error).__name__,
+                        str(orig_error)[:500],
+                        tb_str[:3000],
+                        datetime.now(timezone.utc).isoformat()
+                    )
+                )
+                conn.commit()
+            self.bot.dispatch("command_failed_telemetry", ctx, orig_error)
+        except Exception as tel_err:
+            print(f"Failed to record error telemetry: {tel_err}", flush=True)
+
         try:
             embed = discord.Embed(
                 title=f"⚠️ Command Error: &{ctx.command.name if ctx.command else 'unknown'}",
                 description=f"```{str(orig_error)[:400]}```",
                 color=ERROR_COLOR,
             )
-            embed.set_footer(text="Type &lasterror for developer diagnostics • Use &help for command syntax")
+            embed.set_footer(text="Type &autofix to trigger autonomous AI repair • Use &help for command syntax")
             await ctx.reply(embed=embed)
         except Exception:
             pass
