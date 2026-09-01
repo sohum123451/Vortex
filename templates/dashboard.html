@@ -25,9 +25,10 @@
         </div>
         <div class="mobile-guild-badge">
             {% if guild.icon %}
-                <img src="https://cdn.discordapp.com/icons/{{ guild.id }}/{{ guild.icon }}.png" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" alt="{{ guild.name }}">
+                <img src="{{ guild.icon.url }}" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover;" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="guild-icon-fallback" style="display: none; width: 34px; height: 34px;">{{ guild.name[0]|upper }}</div>
             {% else %}
-                <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--color-primary); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; color: #fff;">{{ guild.name[0]|upper }}</div>
+                <div class="guild-icon-fallback" style="width: 34px; height: 34px;">{{ guild.name[0]|upper }}</div>
             {% endif %}
         </div>
     </header>
@@ -56,7 +57,8 @@
 
                 <div class="guild-info-banner">
                     {% if guild.icon %}
-                        <img src="https://cdn.discordapp.com/icons/{{ guild.id }}/{{ guild.icon }}.png" alt="{{ guild.name }}">
+                        <img src="{{ guild.icon.url }}" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="guild-icon-fallback" style="display: none;">{{ guild.name[0]|upper }}</div>
                     {% else %}
                         <div class="guild-icon-fallback">{{ guild.name[0]|upper }}</div>
                     {% endif %}
@@ -301,13 +303,11 @@
                                     <tr>
                                         <th>Rank</th>
                                         <th>Username</th>
-                                        <th>Wallet</th>
-                                        <th>Bank</th>
                                         <th>Net Worth</th>
                                     </tr>
                                 </thead>
-                                <tbody id="economy-leaderboard-body">
-                                    <tr><td colspan="5" class="loading">Loading data...</td></tr>
+                                <tbody id="eco-leaderboard-body">
+                                    <tr><td colspan="3" class="loading">Loading data...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -315,85 +315,7 @@
                 </div>
             </section>
 
-            <!-- 📚 TAB 4: DOCS -->
-            <section id="tab-docs" class="tab-pane">
-                <div class="section-header">
-                    <h2>Command Reference</h2>
-                    <p>Quick lookup for popular commands and usage shortcuts.</p>
-                </div>
-
-                <div class="docs-wrapper">
-                    <div class="docs-search-bar">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" id="docs-search-input" placeholder="Search commands or aliases...">
-                    </div>
-
-                    <div class="table-container">
-                        <table class="docs-table">
-                            <thead>
-                                <tr>
-                                    <th>Category</th>
-                                    <th>Command</th>
-                                    <th>Aliases</th>
-                                    <th>Examples</th>
-                                </tr>
-                            </thead>
-                            <tbody id="docs-table-body">
-                                <tr>
-                                    <td><span class="badge">Music</span></td>
-                                    <td><strong>play</strong></td>
-                                    <td><code>p</code>, <code>start</code></td>
-                                    <td><code>&play study beats</code>, <code>/play lofi</code></td>
-                                </tr>
-                                <tr>
-                                    <td><span class="badge">Music</span></td>
-                                    <td><strong>volume</strong></td>
-                                    <td><code>vol</code>, <code>v</code></td>
-                                    <td><code>&volume 50</code>, <code>/volume 80</code></td>
-                                </tr>
-                                <tr>
-                                    <td><span class="badge">Music</span></td>
-                                    <td><strong>skip</strong></td>
-                                    <td><code>s</code>, <code>next</code></td>
-                                    <td><code>&skip</code>, <code>/skip</code></td>
-                                </tr>
-                                <tr>
-                                    <td><span class="badge">Music</span></td>
-                                    <td><strong>nowplaying</strong></td>
-                                    <td><code>np</code>, <code>song</code></td>
-                                    <td><code>&np</code>, <code>/nowplaying</code></td>
-                                </tr>
-                                <tr>
-                                    <td><span class="badge">Radio</span></td>
-                                    <td><strong>radio_lofi</strong></td>
-                                    <td><code>lofi</code>, <code>rl</code></td>
-                                    <td><code>&lofi</code>, <code>/radio_lofi</code></td>
-                                </tr>
-                                <tr>
-                                    <td><span class="badge">Radio</span></td>
-                                    <td><strong>radio_synthwave</strong></td>
-                                    <td><code>synthwave</code>, <code>rs</code></td>
-                                    <td><code>&synthwave</code>, <code>/radio_synthwave</code></td>
-                                </tr>
-                                <tr>
-                                    <td><span class="badge">Radio</span></td>
-                                    <td><strong>radio_jazz</strong></td>
-                                    <td><code>jazz</code>, <code>rj</code></td>
-                                    <td><code>&jazz</code>, <code>/radio_jazz</code></td>
-                                </tr>
-                                <tr>
-                                    <td><span class="badge">Radio</span></td>
-                                    <td><strong>radio_classical</strong></td>
-                                    <td><code>piano</code>, <code>rcp</code></td>
-                                    <td><code>&piano</code>, <code>/radio_classical</code></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 🛡️ TAB 5: MODERATION -->
+            <!-- 🛡️ TAB 4: MODERATION -->
             <section id="tab-moderation" class="tab-pane">
                 <div class="section-header">
                     <h2>Moderation Logs</h2>

@@ -277,7 +277,8 @@
         {% for g in guilds %}
             <div class="guild-card" data-guild-id="{{ g.id }}">
                 {% if g.icon %}
-                    <img src="https://cdn.discordapp.com/icons/{{ g.id }}/{{ g.icon }}.png" class="guild-icon-large" alt="{{ g.name }}">
+                    <img src="https://cdn.discordapp.com/icons/{{ g.id }}/{{ g.icon }}.png" class="guild-icon-large" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="guild-fallback-large" style="display: none;">{{ g.name[0]|upper }}</div>
                 {% else %}
                     <div class="guild-fallback-large">{{ g.name[0]|upper }}</div>
                 {% endif %}
