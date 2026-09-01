@@ -133,11 +133,22 @@ def help_mod_embed() -> discord.Embed:
     return e
 
 def help_ai_embed() -> discord.Embed:
-    e = base_embed("🤖 AI & Intelligent Suite", "Powered by Google Gemini 3.6 Flash & Groq High-Speed Engines.", AI_COLOR)
+    e = base_embed("🤖 AI & Intelligent Suite", "Powered by Google Gemini 3.6, Groq DeepSeek-R1/LLaMA 3.3, and Pollinations Free Cloud.", AI_COLOR)
     e.add_field(
         name="⚡ Autonomous AI Dynamic Runner",
         value=(
             "• `&do <instruction>` — **Zero-Shot Dynamic Action:** Ask the bot to do *anything* on the server even if no command exists!"
+        ),
+        inline=False,
+    )
+    e.add_field(
+        name="🌐 Multi-Cloud Ecosystem & Generation",
+        value=(
+            "• `&models` — View all 12+ live models across Google, Groq, and Pollinations\n"
+            "• `&deepseek <problem>` — Deep analytical reasoning with DeepSeek-R1 Distill 70B\n"
+            "• `&model_chat <model> <prompt>` — Query specific model (`llama3`, `deepseek`, `gemma`, `qwen`, `mistral`, `gpt4`)\n"
+            "• `&imagine <prompt>` — Free high-resolution Flux/SDXL AI artwork generator\n"
+            "• `&ask_web <query>` — Real-time live web research & synthesis"
         ),
         inline=False,
     )

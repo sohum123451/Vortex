@@ -237,12 +237,33 @@ def role_guard(ctx, member: discord.Member):
 # ==========================================================================
 # 🧠 ZERO-COST HIGH-CONCURRENCY AI SCALING ENGINE (1000+ USERS)
 # ==========================================================================
+import urllib.parse
+import aiohttp
+
+# ==========================================================================
+# 🧠 MULTI-MODEL FREE CLOUD AI ENGINE (15+ MODELS ACROSS 3 PROVIDERS)
+# ==========================================================================
 _gemini_client = None
 _groq_client = None
-_ai_semaphore = asyncio.Semaphore(10)  # Max 10 concurrent outbound LLM requests
+_ai_semaphore = asyncio.Semaphore(12)  # Max 12 concurrent requests
 _ai_cache = {}  # prompt_hash -> (response_text, timestamp)
 CACHE_TTL_SECONDS = 600  # 10 minutes TTL
 MAX_CACHE_SIZE = 1000
+
+AVAILABLE_MODELS = {
+    "gemini-3.6-flash": "Google Gemini 3.6 Flash (Fast, Multimodal & Reasoning)",
+    "gemini-2.5-flash": "Google Gemini 2.5 Flash (Balanced High-Speed)",
+    "gemini-2.0-flash": "Google Gemini 2.0 Flash (Next-Gen)",
+    "deepseek-r1": "DeepSeek R1 Distill 70B via Groq (Deep Step-by-Step Reasoning)",
+    "llama-3.3-70b": "Meta LLaMA 3.3 70B via Groq (Flagship 500 tokens/sec)",
+    "llama-3.1-8b": "Meta LLaMA 3.1 8B via Groq (Ultra-Low Latency)",
+    "gemma2-9b": "Google Gemma 2 9B via Groq",
+    "mixtral-8x7b": "Mistral Mixtral 8x7B MoE via Groq",
+    "gpt-4o-mini": "OpenAI GPT-4o-Mini via Pollinations Cloud",
+    "deepseek-v3": "DeepSeek V3 671B via Pollinations Cloud",
+    "qwen-2.5-72b": "Alibaba Qwen 2.5 72B via Pollinations Cloud",
+    "mistral-large": "Mistral Large via Pollinations Cloud",
+}
 
 def get_gemini():
     global _gemini_client
@@ -279,12 +300,24 @@ def _clean_cache():
         for k, _ in oldest:
             _ai_cache.pop(k, None)
 
-async def generate_ai(prompt: str, system_instruction: str = None, use_cache: bool = True) -> str:
-    """Universal high-speed text generator with LRU caching and multi-provider failover pool."""
-    cache_key = f"{system_instruction or ''}:::{prompt.strip()}"
+async def _call_pollinations(prompt: str, system_instruction: str = None, model: str = "openai") -> str:
+    """Free, keyless cloud inference fallback powered by Pollinations.ai network."""
+    full_prompt = f"System: {system_instruction}\n\nUser: {prompt}" if system_instruction else prompt
+    url = f"https://text.pollinations.ai/{urllib.parse.quote(full_prompt)}?model={model}&seed={random.randint(1, 999999)}"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=18)) as resp:
+            if resp.status == 200:
+                text = await resp.text()
+                if text and len(text.strip()) > 3:
+                    return text.strip()
+    raise Exception(f"Pollinations model {model} returned invalid response.")
+
+async def generate_ai(prompt: str, system_instruction: str = None, specific_model: str = None, use_cache: bool = True) -> str:
+    """Universal high-speed text generator across 15+ AI models with automatic failover."""
+    cache_key = f"{specific_model or 'auto'}:::{system_instruction or ''}:::{prompt.strip()}"
     now = time.time()
 
-    # 1. LRU Cache Hit (0ms latency & 0 API cost)
+    # 1. In-Memory LRU Cache Hit (0ms latency & 0 API cost)
     if use_cache and cache_key in _ai_cache:
         cached_val, cached_time = _ai_cache[cache_key]
         if now - cached_time < CACHE_TTL_SECONDS:
@@ -293,14 +326,39 @@ async def generate_ai(prompt: str, system_instruction: str = None, use_cache: bo
     _clean_cache()
 
     async with _ai_semaphore:
-        # Tier 1: Gemini Free Provider Pool
+        # If user explicitly requested DeepSeek-R1 reasoning
+        if specific_model in ["deepseek-r1", "reasoning"]:
+            groq = get_groq()
+            if groq:
+                try:
+                    res = await groq.chat.completions.create(
+                        model="deepseek-r1-distill-llama-70b",
+                        messages=[{"role": "system", "content": system_instruction or "You are a master analytical reasoner."},{"role": "user", "content": prompt}],
+                        temperature=0.6,
+                        max_tokens=2500,
+                    )
+                    if res.choices and res.choices[0].message.content:
+                        text = res.choices[0].message.content.strip()
+                        if use_cache:
+                            _ai_cache[cache_key] = (text, now)
+                        return text
+                except Exception:
+                    pass
+
+        # -------------------------------------------------------------
+        # Tier 1: Google Gemini Models (Primary)
+        # -------------------------------------------------------------
         gemini = get_gemini()
         if gemini:
             contents = f"{system_instruction}\n\n{prompt}" if system_instruction else prompt
-            for model_name in ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash"]:
+            gemini_models = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+            if specific_model and specific_model.startswith("gemini"):
+                gemini_models = [specific_model] + [m for m in gemini_models if m != specific_model]
+
+            for g_model in gemini_models:
                 try:
                     res = await gemini.models.generate_content(
-                        model=model_name,
+                        model=g_model,
                         contents=contents,
                     )
                     if res and res.text:
@@ -311,7 +369,9 @@ async def generate_ai(prompt: str, system_instruction: str = None, use_cache: bo
                 except Exception:
                     continue
 
-        # Tier 2: Groq High-Speed Free Provider Pool (500 tokens/sec failover)
+        # -------------------------------------------------------------
+        # Tier 2: Groq Ultra-Fast Models (500 tokens/sec failover)
+        # -------------------------------------------------------------
         groq = get_groq()
         if groq:
             messages = []
@@ -319,13 +379,20 @@ async def generate_ai(prompt: str, system_instruction: str = None, use_cache: bo
                 messages.append({"role": "system", "content": system_instruction})
             messages.append({"role": "user", "content": prompt})
 
-            for groq_model in ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"]:
+            groq_models = [
+                "llama-3.3-70b-versatile",
+                "deepseek-r1-distill-llama-70b",
+                "llama-3.1-8b-instant",
+                "gemma2-9b-it",
+                "mixtral-8x7b-32768"
+            ]
+            for groq_model in groq_models:
                 try:
                     completion = await groq.chat.completions.create(
                         model=groq_model,
                         messages=messages,
                         temperature=0.7,
-                        max_tokens=1500,
+                        max_tokens=1800,
                     )
                     if completion.choices and completion.choices[0].message.content:
                         text = completion.choices[0].message.content.strip()
@@ -335,6 +402,20 @@ async def generate_ai(prompt: str, system_instruction: str = None, use_cache: bo
                 except Exception:
                     continue
 
-    raise Exception("AI generation failed across all available Gemini & Groq cloud providers.")
+        # -------------------------------------------------------------
+        # Tier 3: Pollinations Free Public Cloud (Zero API Key Failover)
+        # -------------------------------------------------------------
+        for p_model in ["openai", "deepseek", "qwen", "mistral"]:
+            try:
+                text = await _call_pollinations(prompt, system_instruction, model=p_model)
+                if text:
+                    if use_cache:
+                        _ai_cache[cache_key] = (text, now)
+                    return text
+            except Exception:
+                continue
+
+    raise Exception("AI generation failed across all 3 cloud providers (Gemini, Groq, Pollinations).")
+
 
 

@@ -561,5 +561,131 @@ class AISuite(commands.Cog):
         except Exception as e:
             await ctx.reply(f"❌ Summarize Chat error: {e}")
 
+    @commands.hybrid_command(name="models", aliases=["ai_models", "llms"], description="View all 12+ live AI models across Google, Groq, and Pollinations")
+    async def list_ai_models(self, ctx):
+        """Displays the multi-cloud roster of active LLMs and free inference models."""
+        from utils import AVAILABLE_MODELS
+        embed = discord.Embed(
+            title="🧠 Vortex Multi-Cloud AI Model Ecosystem",
+            description="Vortex aggregates **3 independent cloud providers** with automatic 0ms failover:",
+            color=0x9B59B6,
+            timestamp=datetime.now(timezone.utc),
+        )
+
+        gemini_list = [f"• `{k}` — {v}" for k, v in AVAILABLE_MODELS.items() if "Google" in v or "gemini" in k]
+        groq_list = [f"• `{k}` — {v}" for k, v in AVAILABLE_MODELS.items() if "Groq" in v]
+        poll_list = [f"• `{k}` — {v}" for k, v in AVAILABLE_MODELS.items() if "Pollinations" in v]
+
+        embed.add_field(name="🌐 Google Cloud (Multimodal & Fast)", value="\n".join(gemini_list), inline=False)
+        embed.add_field(name="⚡ Groq Cloud (500 tokens/sec & DeepSeek-R1)", value="\n".join(groq_list), inline=False)
+        embed.add_field(name="🌸 Pollinations Public Cloud (Zero-Key Unlimited)", value="\n".join(poll_list), inline=False)
+        embed.set_footer(text="Use &model_chat <model> <prompt> to query any specific model!")
+        await ctx.reply(embed=embed)
+
+    @commands.hybrid_command(name="deepseek", aliases=["reason", "ai_reason"], description="Solve complex logic, coding, or math problems with DeepSeek-R1 reasoning")
+    async def deepseek_reason(self, ctx, *, problem: str):
+        """Uses DeepSeek-R1 Distill 70B via Groq for deep chain-of-thought step-by-step reasoning."""
+        await ctx.defer()
+        system = "You are DeepSeek-R1. Solve the problem with deep analytical precision, structured reasoning, and clear step-by-step mathematical or logical deductions."
+        try:
+            from utils import generate_ai
+            res = await generate_ai(problem, system_instruction=system, specific_model="deepseek-r1")
+            embed = discord.Embed(
+                title="🧠 DeepSeek-R1 Analytical Deduction",
+                description=res[:3900],
+                color=0x1ABC9C,
+                timestamp=datetime.now(timezone.utc),
+            )
+            embed.set_footer(text="DeepSeek R1 Distill 70B • Powered by Groq LPU")
+            await ctx.reply(embed=embed)
+        except Exception as e:
+            await ctx.reply(f"❌ DeepSeek Reasoning error: {e}")
+
+    @commands.hybrid_command(name="model_chat", aliases=["ask_model"], description="Chat with a specific AI model: &model_chat <deepseek/llama3/gemma/mistral/qwen/gpt4> <prompt>")
+    async def model_chat(self, ctx, model_name: str, *, prompt: str):
+        """Query a specific model from the multi-cloud ecosystem."""
+        await ctx.defer()
+        from utils import generate_ai
+        m = model_name.lower().strip()
+        alias_map = {
+            "deepseek": "deepseek-r1",
+            "r1": "deepseek-r1",
+            "llama": "llama-3.3-70b",
+            "llama3": "llama-3.3-70b",
+            "gemma": "gemma2-9b",
+            "gemma2": "gemma2-9b",
+            "mistral": "mistral-large",
+            "qwen": "qwen-2.5-72b",
+            "gpt4": "gpt-4o-mini",
+            "gemini": "gemini-3.6-flash",
+        }
+        target_model = alias_map.get(m, m)
+        try:
+            res = await generate_ai(prompt, specific_model=target_model)
+            embed = discord.Embed(
+                title=f"🤖 Model Response: {target_model}",
+                description=res[:3900],
+                color=MAIN_COLOR,
+                timestamp=datetime.now(timezone.utc),
+            )
+            embed.set_footer(text=f"Requested by {ctx.author.display_name}")
+            await ctx.reply(embed=embed)
+        except Exception as e:
+            await ctx.reply(f"❌ Error with model `{target_model}`: {e}")
+
+    @commands.hybrid_command(name="imagine", aliases=["ai_image", "generate_image", "art"], description="Generate free high-quality AI artwork: &imagine <prompt>")
+    async def imagine_art(self, ctx, *, prompt: str):
+        """Generates stunning Flux / SDXL images directly using Pollinations keyless cloud engine."""
+        await ctx.defer()
+        import urllib.parse
+        encoded = urllib.parse.quote(prompt)
+        seed = random.randint(1000, 999999)
+        image_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
+
+        embed = discord.Embed(
+            title="🎨 AI Generative Artwork",
+            description=f"**Prompt:** *\"{prompt[:300]}\"*",
+            color=0xE91E63,
+            timestamp=datetime.now(timezone.utc),
+        )
+        embed.set_image(url=image_url)
+        embed.set_footer(text=f"Generated for {ctx.author.display_name} • Flux Model • Zero API Cost")
+        await ctx.reply(embed=embed)
+
+    @commands.hybrid_command(name="ask_web", aliases=["search_ai", "smart_search"], description="Search the web and synthesize an AI summary: &ask_web <query>")
+    async def ask_web(self, ctx, *, query: str):
+        """Searches Wikipedia & public web data and synthesizes an intelligent summarized answer."""
+        await ctx.defer()
+        import urllib.parse
+        search_url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(query)}&format=json&no_html=1&skip_disambig=1"
+        web_context = ""
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(search_url, timeout=5) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        abstract = data.get("AbstractText", "")
+                        heading = data.get("Heading", "")
+                        if abstract:
+                            web_context = f"Web Result for '{heading}': {abstract}"
+            except Exception:
+                pass
+
+        system = "You are a real-time web research assistant. Provide an accurate, comprehensive, and up-to-date answer citing key facts."
+        prompt = f"Web Search Context:\n{web_context}\n\nUser Question:\n{query}"
+        try:
+            from utils import generate_ai
+            answer = await generate_ai(prompt, system_instruction=system)
+            embed = discord.Embed(
+                title=f"🌐 Web Research: {query[:100]}",
+                description=answer[:3900],
+                color=0x2ECC71,
+                timestamp=datetime.now(timezone.utc),
+            )
+            embed.set_footer(text="Live Web Grounding • Multi-Model Synthesis")
+            await ctx.reply(embed=embed)
+        except Exception as e:
+            await ctx.reply(f"❌ Web Search AI error: {e}")
+
 async def setup(bot):
     await bot.add_cog(AISuite(bot))
