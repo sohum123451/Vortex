@@ -608,13 +608,16 @@ class AISuite(commands.Cog):
         from utils import generate_ai
         m = model_name.lower().strip()
         alias_map = {
+            "nemotron": "nemotron-340b",
+            "nvidia": "nemotron-340b",
             "deepseek": "deepseek-r1",
             "r1": "deepseek-r1",
             "llama": "llama-3.3-70b",
             "llama3": "llama-3.3-70b",
+            "llama90b": "llama-3.2-90b",
             "gemma": "gemma2-9b",
             "gemma2": "gemma2-9b",
-            "mistral": "mistral-large",
+            "mistral": "mistral-large-2",
             "qwen": "qwen-2.5-72b",
             "gpt4": "gpt-4o-mini",
             "gemini": "gemini-3.6-flash",
@@ -632,6 +635,24 @@ class AISuite(commands.Cog):
             await ctx.reply(embed=embed)
         except Exception as e:
             await ctx.reply(f"❌ Error with model `{target_model}`: {e}")
+
+    @commands.hybrid_command(name="nemotron", aliases=["nvidia"], description="Chat directly with NVIDIA Nemotron Enterprise AI: &nemotron <prompt>")
+    async def nemotron_chat(self, ctx, *, prompt: str):
+        """Query NVIDIA Nemotron Enterprise AI."""
+        await ctx.defer()
+        from utils import generate_ai
+        try:
+            res = await generate_ai(prompt, specific_model="nemotron-340b")
+            embed = discord.Embed(
+                title="🟢 NVIDIA Nemotron Enterprise Response",
+                description=res[:3900],
+                color=0x76B900,  # NVIDIA Green
+                timestamp=datetime.now(timezone.utc),
+            )
+            embed.set_footer(text="NVIDIA NIM AI Platform • Accelerated Enterprise Cloud")
+            await ctx.reply(embed=embed)
+        except Exception as e:
+            await ctx.reply(f"❌ NVIDIA NIM Error: {e}")
 
     @commands.hybrid_command(name="imagine", aliases=["ai_image", "generate_image", "art"], description="Generate free high-quality AI artwork: &imagine <prompt>")
     async def imagine_art(self, ctx, *, prompt: str):

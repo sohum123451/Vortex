@@ -254,6 +254,9 @@ AVAILABLE_MODELS = {
     "gemini-3.6-flash": "Google Gemini 3.6 Flash (Fast, Multimodal & Reasoning)",
     "gemini-2.5-flash": "Google Gemini 2.5 Flash (Balanced High-Speed)",
     "gemini-2.0-flash": "Google Gemini 2.0 Flash (Next-Gen)",
+    "nemotron-340b": "NVIDIA Nemotron-4 340B Instruct via NVIDIA NIM",
+    "mistral-large-2": "Mistral Large 2 123B via NVIDIA NIM",
+    "llama-3.2-90b": "Meta LLaMA 3.2 90B via NVIDIA NIM",
     "deepseek-r1": "DeepSeek R1 Distill 70B via Groq (Deep Step-by-Step Reasoning)",
     "llama-3.3-70b": "Meta LLaMA 3.3 70B via Groq (Flagship 500 tokens/sec)",
     "llama-3.1-8b": "Meta LLaMA 3.1 8B via Groq (Ultra-Low Latency)",
@@ -289,6 +292,36 @@ def get_groq():
                 pass
     return _groq_client
 
+async def _call_nvidia(prompt: str, system_instruction: str = None, model: str = "nvidia/nemotron-4-340b-instruct") -> str:
+    """Enterprise AI inference powered by NVIDIA NIM."""
+    api_key = os.getenv("NVIDIA_API_KEY", "")
+    if not api_key:
+        raise Exception("NVIDIA API key is not configured.")
+
+    url = "https://integrate.api.nvidia.com/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    messages = []
+    if system_instruction:
+        messages.append({"role": "system", "content": system_instruction})
+    messages.append({"role": "user", "content": prompt})
+
+    payload = {
+        "model": model,
+        "messages": messages,
+        "temperature": 0.6,
+        "max_tokens": 1800,
+    }
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=20)) as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                if data.get("choices") and data["choices"][0].get("message"):
+                    return data["choices"][0]["message"]["content"].strip()
+    raise Exception(f"NVIDIA NIM model {model} failed.")
+
 def _clean_cache():
     """Prune expired items from memory cache."""
     now = time.time()
@@ -313,7 +346,7 @@ async def _call_pollinations(prompt: str, system_instruction: str = None, model:
     raise Exception(f"Pollinations model {model} returned invalid response.")
 
 async def generate_ai(prompt: str, system_instruction: str = None, specific_model: str = None, use_cache: bool = True) -> str:
-    """Universal high-speed text generator across 15+ AI models with automatic failover."""
+    """Universal high-speed text generator across 18+ AI models with automatic failover."""
     cache_key = f"{specific_model or 'auto'}:::{system_instruction or ''}:::{prompt.strip()}"
     now = time.time()
 
@@ -326,6 +359,25 @@ async def generate_ai(prompt: str, system_instruction: str = None, specific_mode
     _clean_cache()
 
     async with _ai_semaphore:
+        # If user explicitly requested NVIDIA NIM or specific models
+        if specific_model in ["nemotron", "nemotron-340b", "nvidia", "mistral-large-2", "llama-3.2-90b"]:
+            nv_map = {
+                "nemotron": "nvidia/nemotron-4-340b-instruct",
+                "nemotron-340b": "nvidia/nemotron-4-340b-instruct",
+                "nvidia": "nvidia/nemotron-4-340b-instruct",
+                "mistral-large-2": "mistralai/mistral-large-2-instruct",
+                "llama-3.2-90b": "meta/llama-3.2-90b-vision-instruct",
+            }
+            target_nv = nv_map.get(specific_model, "nvidia/nemotron-4-340b-instruct")
+            try:
+                text = await _call_nvidia(prompt, system_instruction, model=target_nv)
+                if text:
+                    if use_cache:
+                        _ai_cache[cache_key] = (text, now)
+                    return text
+            except Exception:
+                pass
+
         # If user explicitly requested DeepSeek-R1 reasoning
         if specific_model in ["deepseek-r1", "reasoning"]:
             groq = get_groq()
@@ -370,7 +422,20 @@ async def generate_ai(prompt: str, system_instruction: str = None, specific_mode
                     continue
 
         # -------------------------------------------------------------
-        # Tier 2: Groq Ultra-Fast Models (500 tokens/sec failover)
+        # Tier 2: NVIDIA NIM Enterprise Models (Failover Tier)
+        # -------------------------------------------------------------
+        for nv_model in ["nvidia/nemotron-4-340b-instruct", "mistralai/mistral-large-2-instruct", "meta/llama-3.2-90b-vision-instruct"]:
+            try:
+                text = await _call_nvidia(prompt, system_instruction, model=nv_model)
+                if text:
+                    if use_cache:
+                        _ai_cache[cache_key] = (text, now)
+                    return text
+            except Exception:
+                continue
+
+        # -------------------------------------------------------------
+        # Tier 3: Groq Ultra-Fast Models (500 tokens/sec failover)
         # -------------------------------------------------------------
         groq = get_groq()
         if groq:
@@ -403,7 +468,7 @@ async def generate_ai(prompt: str, system_instruction: str = None, specific_mode
                     continue
 
         # -------------------------------------------------------------
-        # Tier 3: Pollinations Free Public Cloud (Zero API Key Failover)
+        # Tier 4: Pollinations Free Public Cloud (Zero API Key Failover)
         # -------------------------------------------------------------
         for p_model in ["openai", "deepseek", "qwen", "mistral"]:
             try:
@@ -415,7 +480,7 @@ async def generate_ai(prompt: str, system_instruction: str = None, specific_mode
             except Exception:
                 continue
 
-    raise Exception("AI generation failed across all 3 cloud providers (Gemini, Groq, Pollinations).")
+    raise Exception("AI generation failed across all 4 cloud providers (Gemini, NVIDIA NIM, Groq, Pollinations).")
 
 
 
