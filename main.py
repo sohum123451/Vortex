@@ -205,11 +205,8 @@ def dashboard_view():
         return render_template("loading.html", guild_id=guild_id)
         
     guild = bot.get_guild(int(guild_id))
-    if not guild:
-        invite_url = f"https://discord.com/api/oauth2/authorize?client_id={DISCORD_CLIENT_ID}&permissions=8&scope=bot%20applications.commands&guild_id={guild_id}&disable_guild_select=true"
-        return redirect(invite_url)
-        
-    return render_template("dashboard.html", user=session["user"], guild=guild)
+    guild_icon_url = str(guild.icon.url) if (guild and guild.icon) else None
+    return render_template("dashboard.html", user=session["user"], guild=guild, guild_icon_url=guild_icon_url)
 
 @app.route("/api/stats")
 def get_stats():
@@ -268,17 +265,13 @@ def get_leaderboards():
         with sqlite3.connect(DB_FILE) as conn:
             cur = conn.cursor()
             
-            # Economy
-            cur.execute("SELECT user_id, balance, bank FROM economy")
+            # Economy (resolve top users)
+            cur.execute("SELECT user_id, balance, bank FROM economy ORDER BY (balance + bank) DESC LIMIT 20")
             all_eco = cur.fetchall()
             
-            guild_member_ids = {str(m.id) for m in guild.members}
-            eco_filtered = [row for row in all_eco if row[0] in guild_member_ids]
-            eco_filtered.sort(key=lambda r: r[1] + r[2], reverse=True)
-            
-            for row in eco_filtered[:10]:
+            for row in all_eco[:10]:
                 user_id = row[0]
-                user = guild.get_member(int(user_id))
+                user = guild.get_member(int(user_id)) or (bot.get_user(int(user_id)) if bot.is_ready() else None)
                 username = user.name if user else f"User {user_id}"
                 economy_leaderboard.append({
                     "username": username,
@@ -291,7 +284,7 @@ def get_leaderboards():
             cur.execute("SELECT user_id, level, xp FROM levels WHERE guild_id = ? ORDER BY xp DESC LIMIT 10", (guild_id,))
             for row in cur.fetchall():
                 user_id = row[0]
-                user = guild.get_member(int(user_id))
+                user = guild.get_member(int(user_id)) or (bot.get_user(int(user_id)) if bot.is_ready() else None)
                 username = user.name if user else f"User {user_id}"
                 levels_leaderboard.append({
                     "username": username,

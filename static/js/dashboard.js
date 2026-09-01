@@ -35,6 +35,39 @@ document.addEventListener("DOMContentLoaded", () => {
     if (closeDrawerBtn) closeDrawerBtn.addEventListener("click", closeMobileDrawer);
     if (mobileBackdrop) mobileBackdrop.addEventListener("click", closeMobileDrawer);
 
+    // 🔄 DESKTOP SIDEBAR COLLAPSE TOGGLE
+    const sidebarCollapseBtn = document.getElementById("sidebar-collapse-btn");
+    const mainContent = document.querySelector(".main-content");
+    const collapseIcon = document.getElementById("collapse-icon");
+
+    // Restore saved state
+    if (localStorage.getItem("vortex_sidebar_collapsed") === "true") {
+        if (sidebarDrawer) sidebarDrawer.classList.add("collapsed");
+        if (mainContent) mainContent.classList.add("sidebar-collapsed");
+        if (collapseIcon) {
+            collapseIcon.classList.remove("fa-chevron-left");
+            collapseIcon.classList.add("fa-chevron-right");
+        }
+    }
+
+    if (sidebarCollapseBtn) {
+        sidebarCollapseBtn.addEventListener("click", () => {
+            const isCollapsed = sidebarDrawer.classList.toggle("collapsed");
+            if (mainContent) mainContent.classList.toggle("sidebar-collapsed", isCollapsed);
+            localStorage.setItem("vortex_sidebar_collapsed", isCollapsed ? "true" : "false");
+            
+            if (collapseIcon) {
+                if (isCollapsed) {
+                    collapseIcon.classList.remove("fa-chevron-left");
+                    collapseIcon.classList.add("fa-chevron-right");
+                } else {
+                    collapseIcon.classList.remove("fa-chevron-right");
+                    collapseIcon.classList.add("fa-chevron-left");
+                }
+            }
+        });
+    }
+
     // ==========================================
     // 🧭 TAB NAVIGATION SWITCHER
     // ==========================================
@@ -387,13 +420,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (ecoBody) {
                 if (data.economy && data.economy.length > 0) {
-                    ecoBody.innerHTML = data.economy.map((e, i) => `
+                    ecoBody.innerHTML = data.economy.map((e, i) => {
+                        const totalVal = e.total !== undefined ? e.total : ((e.balance || 0) + (e.bank || 0));
+                        return `
                         <tr>
                             <td><strong>#${i + 1}</strong></td>
                             <td>${e.username}</td>
-                            <td style="color:var(--accent-emerald); font-weight:700;">$${(e.net_worth || 0).toLocaleString()}</td>
+                            <td style="color:var(--accent-emerald); font-weight:700;">$${totalVal.toLocaleString()}</td>
                         </tr>
-                    `).join("");
+                        `;
+                    }).join("");
                 } else {
                     ecoBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:28px; color:var(--text-muted);">No economy records found. Claim daily coins with <code>&daily</code>!</td></tr>`;
                 }

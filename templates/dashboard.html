@@ -11,7 +11,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Custom Style -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=3.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=4.0">
 </head>
 <body data-guild-id="{{ guild.id }}">
     <!-- 📱 MOBILE TOPBAR -->
@@ -50,14 +50,19 @@
                         <img src="{{ url_for('static', filename='images/vortex_mascot.jpg') }}" class="brand-mascot-img" alt="Vortex">
                         <span class="logo-text">Vortex</span>
                     </div>
-                    <button id="close-drawer-btn" class="close-drawer-btn" aria-label="Close Navigation">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <button id="sidebar-collapse-btn" class="sidebar-collapse-toggle" title="Toggle Sidebar">
+                            <i class="fa-solid fa-chevron-left" id="collapse-icon"></i>
+                        </button>
+                        <button id="close-drawer-btn" class="close-drawer-btn" aria-label="Close Navigation">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="guild-info-banner">
-                    {% if guild.icon %}
-                        <img src="{{ guild.icon.url }}" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    {% if guild_icon_url %}
+                        <img src="{{ guild_icon_url }}" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                         <div class="guild-icon-fallback" style="display: none;">{{ guild.name[0]|upper }}</div>
                     {% else %}
                         <div class="guild-icon-fallback">{{ guild.name[0]|upper }}</div>
@@ -576,8 +581,8 @@
 
                 <div class="data-box" style="margin-bottom: 24px;">
                     <div style="position: relative; margin-bottom: 18px;">
-                        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
-                        <input type="text" id="dash-cmd-search" placeholder="Search commands, syntax, or keywords (e.g. setprefix, nemotron, imagine, blackjack, ban)..." style="width: 100%; padding: 14px 18px 14px 44px; background: rgba(10, 12, 16, 0.9); border: 1px solid var(--border-glass); border-radius: var(--radius-md); color: #fff; font-size: 0.95rem;">
+                        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; z-index: 5;"></i>
+                        <input type="text" id="dash-cmd-search" placeholder="Search commands, syntax, or keywords (e.g. setprefix, nemotron, imagine, blackjack, ban)..." style="width: 100%; padding: 14px 18px 14px 50px !important; background: rgba(10, 12, 16, 0.9); border: 1px solid var(--border-glass); border-radius: var(--radius-md); color: #fff; font-size: 0.95rem;">
                     </div>
 
                     <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;" id="dash-cat-filters">
