@@ -251,6 +251,10 @@
 
     <div class="user-topbar">
         <div class="user-topbar-left">
+            <a href="/" style="display: flex; align-items: center; gap: 8px; text-decoration: none; margin-right: 12px; padding-right: 12px; border-right: 1px solid var(--border-glass);">
+                <img src="{{ url_for('static', filename='images/vortex_mascot.jpg') }}" style="width: 32px; height: 32px; border-radius: 8px;" alt="Vortex">
+                <span style="font-family: var(--font-heading); font-weight: 800; color: #fff; font-size: 1.1rem;">VORTEX</span>
+            </a>
             {% if user.avatar %}
                 <img src="https://cdn.discordapp.com/avatars/{{ user.id }}/{{ user.avatar }}.png" class="user-avatar" alt="{{ user.username }}">
             {% else %}

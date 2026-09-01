@@ -46,7 +46,7 @@
                 
                 <div class="brand">
                     <div class="brand-title-wrap">
-                        <span class="logo-icon"><i class="fa-solid fa-bolt"></i></span>
+                        <img src="{{ url_for('static', filename='images/vortex_mascot.jpg') }}" class="brand-mascot-img" alt="Vortex">
                         <span class="logo-text">Vortex</span>
                     </div>
                     <button id="close-drawer-btn" class="close-drawer-btn" aria-label="Close Navigation">
@@ -99,11 +99,11 @@
                 <div class="user-profile">
                     <div class="user-profile-left">
                         {% if user.avatar %}
-                            <img src="https://cdn.discordapp.com/avatars/{{ user.id }}/{{ user.avatar }}.png" class="user-avatar" alt="{{ user.username }}">
+                            <img src="https://cdn.discordapp.com/avatars/{{ user.id }}/{{ user.avatar }}.png" class="user-avatar-small" alt="{{ user.username }}">
                         {% else %}
-                            <div class="user-avatar-fallback">{{ user.username[0]|upper }}</div>
+                            <div class="user-avatar-small guild-icon-fallback">{{ user.username[0]|upper }}</div>
                         {% endif %}
-                        <span class="user-name-text">{{ user.username }}</span>
+                        <span class="username-display">{{ user.username }}</span>
                     </div>
                     <a href="/logout" class="logout-icon-btn" title="Log Out">
                         <i class="fa-solid fa-arrow-right-from-bracket"></i>
@@ -116,9 +116,13 @@
         <main class="main-content">
             <!-- 📊 TAB 1: OVERVIEW -->
             <section id="tab-overview" class="tab-pane active">
-                <div class="section-header">
-                    <h2>Server Overview</h2>
-                    <p>Live health metrics and database status for {{ guild.name }}.</p>
+                <div class="tab-hero-banner">
+                    <img src="{{ url_for('static', filename='images/cyber_ai_core.jpg') }}" class="tab-hero-img" alt="AI Core">
+                    <div class="tab-hero-overlay">
+                        <span class="hero-tag"><i class="fa-solid fa-bolt"></i> Multi-Cloud AI Neural Core</span>
+                        <h1 class="hero-title">{{ guild.name }} Console</h1>
+                        <p class="hero-desc">Live health monitoring, multi-tier LLM failover, and high-concurrency database metrics.</p>
+                    </div>
                 </div>
                 
                 <div class="stats-grid">
@@ -167,7 +171,7 @@
                             </div>
                             <div class="db-stat-item">
                                 <span class="label">Database Engine</span>
-                                <span class="val font-mono">SQLite 3</span>
+                                <span class="val font-mono">SQLite 3 / Turso Hybrid</span>
                             </div>
                             <div class="db-stat-item">
                                 <span class="label">Connection Status</span>
@@ -179,12 +183,12 @@
                     <!-- Quick Info -->
                     <div class="data-box info-box">
                         <h3><i class="fa-solid fa-circle-info"></i> Bot Configuration</h3>
-                        <p>Vortex is running with full multi-tenancy. You can configure music, moderation, custom autoresponders, and leveling cogs directly in Discord or monitor them in real-time here.</p>
-                        <div class="info-badges">
-                            <span class="badge">discord.py v2.4</span>
-                            <span class="badge">Gemini AI</span>
-                            <span class="badge">High-Res Audio</span>
-                            <span class="badge">SQLite Multi-Tenant</span>
+                        <p>Vortex is running with high-speed multi-cloud inference across NVIDIA Nemotron 550B, DeepSeek-R1 (Groq), Gemini 3.6, and free Flux image generation.</p>
+                        <div class="info-badges" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px;">
+                            <span class="badge music-badge">NVIDIA NIM 550B</span>
+                            <span class="badge music-badge">DeepSeek-R1</span>
+                            <span class="badge music-badge">Gemini 3.6 Flash</span>
+                            <span class="badge music-badge">Flux AI Art</span>
                         </div>
                     </div>
                 </div>
@@ -192,71 +196,70 @@
 
             <!-- 🎵 TAB 2: MUSIC CONTROLLER -->
             <section id="tab-music" class="tab-pane">
-                <div class="section-header">
-                    <h2>Music Console</h2>
-                    <p>Track current playing songs and manage the playlist queue.</p>
+                <div class="tab-hero-banner">
+                    <img src="{{ url_for('static', filename='images/music_visualizer.jpg') }}" class="tab-hero-img" alt="Music Visualizer">
+                    <div class="tab-hero-overlay">
+                        <span class="hero-tag"><i class="fa-solid fa-music"></i> High-Bitrate Voice Audio</span>
+                        <h1 class="hero-title">Live Music Deck</h1>
+                        <p class="hero-desc">Interactive playback controls, queue management, volume sliders, and 24/7 web radio stations.</p>
+                    </div>
                 </div>
 
-                <div class="music-layout">
+                <div class="music-console-grid">
                     <!-- Player Box -->
-                    <div class="music-card player-card">
-                        <div class="guild-selector-wrapper">
-                            <span>Active Channel:</span>
-                            <span class="active-connection-name" style="font-weight: 600; color: var(--color-primary);"><i class="fa-solid fa-volume-high"></i> {{ guild.name }}</span>
-                            <select id="music-guild-select" class="guild-dropdown" style="display: none;">
-                                <option value="{{ guild.id }}" selected>{{ guild.name }}</option>
-                            </select>
-                        </div>
-                        
-                        <div id="player-active-view" class="player-view-wrapper hidden">
-                            <div class="now-playing-info">
-                                <div class="track-artwork">
-                                    <i class="fa-solid fa-compact-disc"></i>
-                                </div>
-                                <div class="track-meta">
-                                    <h3 id="current-track-title" class="track-title">Loading Track...</h3>
-                                    <span id="current-track-uploader" class="track-artist">Artist</span>
-                                </div>
+                    <div class="music-player-card">
+                        <div class="track-info-header">
+                            <div class="album-disc-art">
+                                <i class="fa-solid fa-compact-disc"></i>
                             </div>
-
-                            <!-- Progress Indicator -->
-                            <div class="progress-bar-container">
-                                <div class="stream-line"></div>
-                                <div class="progress-labels">
-                                    <span>Playing</span>
-                                    <span id="track-live-indicator" class="live-badge">LIVE AUDIO</span>
-                                </div>
+                            <div class="track-meta">
+                                <h3 id="current-track-title" class="track-title">No Track Streaming</h3>
+                                <span id="current-track-uploader" class="track-artist">Start playing with &play &lt;song&gt;</span>
                             </div>
-
-                            <!-- Player Controls -->
-                            <div class="player-controls">
-                                <button id="btn-pause-resume" class="control-btn play-pause" aria-label="Play or Pause"><i class="fa-solid fa-play"></i></button>
-                                <button id="btn-skip" class="control-btn" aria-label="Skip"><i class="fa-solid fa-forward-step"></i></button>
-                            </div>
-
-                            <!-- Volume Slider -->
-                            <div class="volume-slider-container">
-                                <i class="fa-solid fa-volume-low" id="volume-icon"></i>
-                                <input type="range" id="player-volume" min="1" max="100" value="70" class="volume-range">
-                                <span id="volume-val-display" class="volume-num">70%</span>
+                            <div class="waveform-equalizer">
+                                <span class="eq-bar"></span>
+                                <span class="eq-bar"></span>
+                                <span class="eq-bar"></span>
+                                <span class="eq-bar"></span>
+                                <span class="eq-bar"></span>
                             </div>
                         </div>
 
-                        <div id="player-empty-view" class="player-view-wrapper empty-state">
+                        <!-- Progress Bar -->
+                        <div class="progress-bar-wrap">
+                            <div class="progress-fill"></div>
+                        </div>
+
+                        <!-- Player Controls -->
+                        <div class="music-controls">
+                            <button id="btn-pause-resume" class="ctrl-btn play-btn" aria-label="Play/Pause"><i class="fa-solid fa-play"></i></button>
+                            <button id="btn-skip" class="ctrl-btn" aria-label="Skip"><i class="fa-solid fa-forward-step"></i></button>
+                        </div>
+
+                        <!-- Volume Slider -->
+                        <div class="volume-control-wrap">
+                            <i class="fa-solid fa-volume-low"></i>
+                            <input type="range" id="player-volume" min="1" max="100" value="70" class="volume-slider">
+                            <span id="volume-val-display" style="font-weight: 700; width: 40px; text-align: right;">70%</span>
+                        </div>
+
+                        <div id="player-empty-view" class="empty-state-notice" style="display: none;">
                             <i class="fa-solid fa-headphones"></i>
-                            <p>No active music streaming in voice right now.</p>
-                            <span class="hint">Use <code>/play &lt;song&gt;</code> or <code>/radio_lofi</code> in your server!</span>
+                            <p>No active music streaming in voice channel.</p>
+                            <small>Use <code>&play &lt;song&gt;</code> or <code>&radio</code> in Discord!</small>
                         </div>
                     </div>
 
                     <!-- Queue Box -->
-                    <div class="music-card queue-card">
-                        <h3>Up Next in Queue</h3>
-                        <div class="queue-list-wrapper">
-                            <ul id="music-queue-list" class="queue-list">
-                                <li class="empty-queue">Queue is currently empty</li>
-                            </ul>
-                        </div>
+                    <div class="data-box queue-card">
+                        <h3><i class="fa-solid fa-list-ol"></i> Up Next in Queue</h3>
+                        <ul id="music-queue-list" style="list-style: none;">
+                            <li class="empty-state-notice" style="padding: 24px 0;">
+                                <i class="fa-solid fa-music"></i>
+                                <p>Queue is empty</p>
+                                <small>Add tracks with <code>&play &lt;url/name&gt;</code></small>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </section>
