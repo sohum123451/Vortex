@@ -486,14 +486,21 @@ Available Globals & Arguments in `run()`:
 - `discord`: discord module
 - `embed_color`: default brand color
 
-Special Intent Handling:
-- If the user asks to "make this server a support server" or "setup support HQ", you can delegate by calling `await bot.get_cog('ServerManagement').setup_support_server_cmd(ctx)` or create the official '⚡ VORTEX SUPPORT HQ' category with announcements, rules, tickets, and bot-commands channels!
+discord.py 2.0 API Rules:
+1. `overwrites` MUST ALWAYS be a dictionary `dict[discord.Role | discord.Member, discord.PermissionOverwrite]`. NEVER a list or tuple.
+2. `guild.create_text_channel(name, category=..., overwrites=...)` - DO NOT pass `type` argument.
+3. `guild.create_voice_channel(name, category=...)` for voice channels.
+4. To clean or remake server:
+   - If user asks to remake or build support server, simply call: `await bot.get_cog('ServerManagement').setup_support_server_cmd(ctx, mode='clean')`
+   - Or to delete all categories and channels:
+     `for ch in list(ctx.guild.channels): await ch.delete()`
+     `for cat in list(ctx.guild.categories): await cat.delete()`
 
 Safety & Scope Rules:
 - User is {'BOT OWNER (Full Access)' if is_owner else 'SERVER ADMIN (Guild-scoped actions only)'}.
 - If Server Admin: ONLY perform server operations on `ctx.guild` (channels, roles, messages, kicks, bans, timeouts, embeds, server economy/stats). DO NOT access OS files, subprocess, or bot tokens.
 - Return a summary string or discord.Embed to reply to the user.
-- If creating channels, roles, or messages, handle potential Discord API errors with try/except.
+- Handle potential Discord API errors with try/except.
 - Output ONLY python code inside ```python ... ``` without commentary.
 """
 
@@ -596,8 +603,26 @@ Generate the `run` async function:"""
             out_logs = stdout.getvalue().strip()
         except asyncio.TimeoutError:
             return await msg.edit(content="⏱️ **Action Timed Out:** The dynamic execution exceeded 15 seconds.")
-        except Exception:
+        except Exception as exec_err:
             err_trace = traceback.format_exc()
+            # 🧬 Telemetry Logging
+            try:
+                with get_db() as db:
+                    db.execute(
+                        "INSERT INTO bot_error_telemetry (guild_id, user_id, command_name, error_type, error_msg, traceback, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (
+                            str(ctx.guild.id if ctx.guild else "DM"),
+                            str(ctx.author.id),
+                            "do",
+                            type(exec_err).__name__,
+                            str(exec_err)[:500],
+                            err_trace[:3000],
+                            datetime.now(timezone.utc).isoformat()
+                        )
+                    )
+                    db.commit()
+            except Exception:
+                pass
             return await msg.edit(content=f"❌ **Execution Error:**\n```py\n{err_trace[-1200:]}\n```")
         finally:
             sys.stdout = sys.__stdout__

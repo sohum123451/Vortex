@@ -393,14 +393,19 @@ class ServerManagement(commands.Cog):
 
         msg = await ctx.reply("⚡ **Constructing Enterprise Vortex Support HQ**\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🟡 `[Step 1/5]` Cleaning up old channels (if requested) & configuring roles...")
 
-        # If user passed 'clean' or 'remake', clean previous channels
-        if mode and mode.lower() in ["clean", "remake", "reset", "purge"]:
+        # If user passed 'clean' or 'remake', clean previous channels AND categories
+        if mode and mode.lower() in ["clean", "remake", "reset", "purge", "all"]:
             for ch in list(ctx.guild.channels):
                 if ch.id != ctx.channel.id:
                     try:
                         await ch.delete(reason="Support HQ Remake")
                     except Exception:
                         pass
+            for cat in list(ctx.guild.categories):
+                try:
+                    await cat.delete(reason="Support HQ Remake")
+                except Exception:
+                    pass
 
         # 1. Create Roles Hierarchy
         founder_role = discord.utils.get(ctx.guild.roles, name="👑 Vortex Founder")
