@@ -644,6 +644,47 @@
                     </div>
                 </div>
             </section>
+
+            <!-- 📚 TAB 6: COMMANDS & DOCS -->
+            <section id="tab-docs" class="tab-pane">
+                <div class="section-header">
+                    <h2>Command Center & Documentation</h2>
+                    <p>Search all 640+ modular commands across 25 categories with real-time syntax examples.</p>
+                </div>
+
+                <div class="data-box" style="margin-bottom: 24px;">
+                    <div style="position: relative; margin-bottom: 18px;">
+                        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                        <input type="text" id="dash-cmd-search" placeholder="Search commands, syntax, or keywords (e.g. setprefix, nemotron, imagine, blackjack, ban)..." style="width: 100%; padding: 14px 18px 14px 44px; background: rgba(10, 12, 16, 0.9); border: 1px solid var(--border-glass); border-radius: var(--radius-md); color: #fff; font-size: 0.95rem;">
+                    </div>
+
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;" id="dash-cat-filters">
+                        <button class="filter-tag-btn active" data-cat="all" style="padding: 6px 14px; border-radius: var(--radius-sm); background: var(--primary); color: #fff; font-weight: 600; font-size: 0.82rem; cursor: pointer;">All</button>
+                        <button class="filter-tag-btn" data-cat="ai" style="padding: 6px 14px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.05); color: var(--text-muted); font-weight: 600; font-size: 0.82rem; cursor: pointer;">AI Suite</button>
+                        <button class="filter-tag-btn" data-cat="server" style="padding: 6px 14px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.05); color: var(--text-muted); font-weight: 600; font-size: 0.82rem; cursor: pointer;">Server & Prefix</button>
+                        <button class="filter-tag-btn" data-cat="moderation" style="padding: 6px 14px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.05); color: var(--text-muted); font-weight: 600; font-size: 0.82rem; cursor: pointer;">Moderation</button>
+                        <button class="filter-tag-btn" data-cat="music" style="padding: 6px 14px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.05); color: var(--text-muted); font-weight: 600; font-size: 0.82rem; cursor: pointer;">Music & Radio</button>
+                        <button class="filter-tag-btn" data-cat="economy" style="padding: 6px 14px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.05); color: var(--text-muted); font-weight: 600; font-size: 0.82rem; cursor: pointer;">Economy & Casino</button>
+                        <button class="filter-tag-btn" data-cat="games" style="padding: 6px 14px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.05); color: var(--text-muted); font-weight: 600; font-size: 0.82rem; cursor: pointer;">Games & Social</button>
+                        <button class="filter-tag-btn" data-cat="utility" style="padding: 6px 14px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.05); color: var(--text-muted); font-weight: 600; font-size: 0.82rem; cursor: pointer;">Utility</button>
+                    </div>
+
+                    <div class="table-container" style="max-height: 480px; overflow-y: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Command</th>
+                                    <th style="width: 15%;">Category</th>
+                                    <th>Description & Usage</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-cmd-table-body">
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
 

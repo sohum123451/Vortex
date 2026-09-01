@@ -513,7 +513,103 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    // ==========================================
+    // 📚 INTERACTIVE COMMAND EXPLORER & DOCS
+    // ==========================================
+    const DASH_COMMANDS = [
+        { name: "setprefix", cat: "server", desc: "Change custom bot prefix for this server: &setprefix <prefix>" },
+        { name: "prefix", cat: "server", desc: "View the active command prefix for this server" },
+        { name: "resetprefix", cat: "server", desc: "Reset server prefix back to default '&'" },
+        { name: "nemotron", cat: "ai", desc: "Chat with NVIDIA Nemotron 3 Ultra 550B enterprise AI" },
+        { name: "deepseek", cat: "ai", desc: "Deep step-by-step logic & math reasoning via DeepSeek-R1 (Groq)" },
+        { name: "imagine", cat: "ai", desc: "Generate free high-resolution Flux & SDXL digital artwork" },
+        { name: "models", cat: "ai", desc: "View all 18+ active AI models across Google, NVIDIA, and Groq" },
+        { name: "model_chat", cat: "ai", desc: "Query a specific model: &model_chat <model> <prompt>" },
+        { name: "ask_web", cat: "ai", desc: "Live web search and real-time AI fact synthesis" },
+        { name: "do", cat: "ai", desc: "Zero-shot dynamic autonomous server actions" },
+        { name: "chat", cat: "ai", desc: "Conversational intelligence powered by Google Gemini 3.6 Flash" },
+        { name: "ask", cat: "ai", desc: "Multimodal image Q&A (attach image + &ask question)" },
+        { name: "play", cat: "music", desc: "Stream high-bitrate music from YouTube, SoundCloud, or search" },
+        { name: "queue", cat: "music", desc: "Display all queued tracks in the voice channel playlist" },
+        { name: "pause / resume", cat: "music", desc: "Pause or resume voice audio playback" },
+        { name: "skip / stop", cat: "music", desc: "Skip current song or stop player and clear playlist" },
+        { name: "volume", cat: "music", desc: "Adjust voice audio playback volume (1-100)" },
+        { name: "radio", cat: "music", desc: "Play 24/7 nonstop curated web radio stations" },
+        { name: "kick / ban", cat: "moderation", desc: "Kick or ban a member from the server" },
+        { name: "timeout", cat: "moderation", desc: "Temporarily mute a member with automated countdown timer" },
+        { name: "warn / warnings", cat: "moderation", desc: "Issue disciplinary warnings and view user infraction history" },
+        { name: "purge", cat: "moderation", desc: "Bulk delete specified number of messages in channel" },
+        { name: "lock / unlock", cat: "moderation", desc: "Lock down text channels during raids or emergencies" },
+        { name: "slowmode", cat: "moderation", desc: "Set channel message cooldown interval" },
+        { name: "balance / daily", cat: "economy", desc: "Check wallet/bank cash and claim daily coin rewards" },
+        { name: "work / crime", cat: "economy", desc: "Earn cash through legal employment or high-stakes heist" },
+        { name: "blackjack", cat: "economy", desc: "Play 21 Blackjack with interactive Hit & Stand buttons" },
+        { name: "slots / gamble", cat: "economy", desc: "Play 3-reel casino slots and double-or-nothing coinflips" },
+        { name: "rob / pay", cat: "economy", desc: "Steal wallet cash or securely transfer funds to members" },
+        { name: "leaderboard", cat: "economy", desc: "View server wealth and economy rankings" },
+        { name: "tictactoe / rps", cat: "games", desc: "Play 2-player interactive button grid minigames" },
+        { name: "tod", cat: "games", desc: "AI-powered multiplayer Truth or Dare game lobbies" },
+        { name: "wyr", cat: "games", desc: "Dynamic AI Would You Rather voting dilemmas" },
+        { name: "tarot / horoscope", cat: "games", desc: "Mystical AI tarot card readings and daily horoscopes" },
+        { name: "meme / joke", cat: "games", desc: "Fetch trending Reddit memes, jokes, and dadjokes" },
+        { name: "announce", cat: "server", desc: "Broadcast styled announcement embeds to designated channels" },
+        { name: "poll", cat: "server", desc: "Create interactive multi-option reaction polls" },
+        { name: "ticket_setup", cat: "server", desc: "Deploy interactive support ticket desks with button panels" },
+        { name: "sticky", cat: "server", desc: "Pin persistent messages that stay at the bottom of channel" },
+        { name: "calc / weather", cat: "utility", desc: "Safe mathematical expression evaluator and live forecasts" },
+        { name: "crypto", cat: "utility", desc: "Real-time cryptocurrency prices, 24h trends, and charts" },
+        { name: "remind / afk", cat: "utility", desc: "Personal timed reminder alerts and AFK status replies" },
+        { name: "snipe / editsnipe", cat: "utility", desc: "Recover recently deleted or edited messages in channel" }
+    ];
+
+    const dashCmdBody = document.getElementById("dash-cmd-table-body");
+    const dashCmdSearch = document.getElementById("dash-cmd-search");
+    const dashFilterBtns = document.querySelectorAll(".filter-tag-btn");
+    let activeDashCat = "all";
+
+    function renderDashCommands() {
+        if (!dashCmdBody) return;
+        const query = dashCmdSearch ? dashCmdSearch.value.toLowerCase().trim() : "";
+        const filtered = DASH_COMMANDS.filter(cmd => {
+            const matchesCat = (activeDashCat === "all" || cmd.cat === activeDashCat);
+            const matchesQuery = cmd.name.toLowerCase().includes(query) || cmd.desc.toLowerCase().includes(query);
+            return matchesCat && matchesQuery;
+        });
+
+        dashCmdBody.innerHTML = filtered.map(c => `
+            <tr>
+                <td><code style="font-family:var(--font-mono); font-weight:700; color:#7986FF; background:rgba(88,101,242,0.14); padding:3px 8px; border-radius:4px;">&${c.name}</code></td>
+                <td><span class="badge" style="font-size:0.75rem; text-transform:uppercase;">${c.cat}</span></td>
+                <td>${c.desc}</td>
+            </tr>
+        `).join("");
+
+        if (filtered.length === 0) {
+            dashCmdBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding:30px;">No matching commands found.</td></tr>`;
+        }
+    }
+
+    if (dashCmdSearch) {
+        dashCmdSearch.addEventListener("input", renderDashCommands);
+    }
+
+    dashFilterBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+            dashFilterBtns.forEach(b => {
+                b.style.background = "rgba(255,255,255,0.05)";
+                b.style.color = "var(--text-muted)";
+            });
+            btn.style.background = "var(--primary)";
+            btn.style.color = "#fff";
+            activeDashCat = btn.dataset.cat;
+            renderDashCommands();
+        });
+    });
+
+    renderDashCommands();
+
     // Auto-fetch active guild data on load
     fetchPrefixConfig();
     fetchLevelConfig();
 });
+
