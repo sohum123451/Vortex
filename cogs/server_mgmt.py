@@ -380,10 +380,10 @@ class ServerManagement(commands.Cog):
     # 🌐 OFFICIAL SUPPORT SERVER SETUP SUITE (&setup_support_server, &support)
     # =========================================================================
 
-    @commands.command(name="setup_support_server", aliases=["makesupportserver", "support_setup", "init_support", "make_support_server"], description="[Admin/Owner] Turn this server into the official Vortex Bot Support HQ")
+    @commands.command(name="setup_support_server", aliases=["makesupportserver", "support_setup", "init_support", "make_support_server", "remake_support_server"], description="[Admin/Owner] Turn this server into a 100% launch-ready, beautifully structured official Vortex Bot Support HQ")
     @commands.has_permissions(administrator=True)
-    async def setup_support_server_cmd(self, ctx):
-        """1-Click official support server setup: channels, roles, ticket desk, and database binding."""
+    async def setup_support_server_cmd(self, ctx, mode: str = None):
+        """1-Click enterprise support server builder: roles, 5 categories, ticket desk, sandbox, and permanent invite."""
         if not ctx.guild:
             return await ctx.reply("❌ This command must be executed within a Discord server.")
 
@@ -391,17 +391,36 @@ class ServerManagement(commands.Cog):
         if not bot_member.guild_permissions.manage_channels or not bot_member.guild_permissions.manage_roles:
             return await ctx.reply("❌ **Missing Permissions:** Vortex requires `Manage Channels` and `Manage Roles` to construct the Support HQ.")
 
-        msg = await ctx.reply("⚡ **Configuring Official Vortex Support HQ**\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🟡 `[Step 1/4]` Creating Support Staff roles...")
+        msg = await ctx.reply("⚡ **Constructing Enterprise Vortex Support HQ**\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🟡 `[Step 1/5]` Cleaning up old channels (if requested) & configuring roles...")
 
-        # 1. Create Staff & Support Roles
-        staff_role = discord.utils.get(ctx.guild.roles, name="👑 Vortex HQ Staff")
-        if not staff_role:
-            staff_role = await ctx.guild.create_role(
-                name="👑 Vortex HQ Staff",
-                color=discord.Color.from_rgb(88, 101, 242),
+        # If user passed 'clean' or 'remake', clean previous channels
+        if mode and mode.lower() in ["clean", "remake", "reset", "purge"]:
+            for ch in list(ctx.guild.channels):
+                if ch.id != ctx.channel.id:
+                    try:
+                        await ch.delete(reason="Support HQ Remake")
+                    except Exception:
+                        pass
+
+        # 1. Create Roles Hierarchy
+        founder_role = discord.utils.get(ctx.guild.roles, name="👑 Vortex Founder")
+        if not founder_role:
+            founder_role = await ctx.guild.create_role(
+                name="👑 Vortex Founder",
+                color=discord.Color.from_rgb(241, 196, 15),
                 hoist=True,
                 mentionable=True,
-                reason="Official Vortex Support HQ Setup"
+                reason="Official Support Server Setup"
+            )
+
+        manager_role = discord.utils.get(ctx.guild.roles, name="🛡️ Support Manager")
+        if not manager_role:
+            manager_role = await ctx.guild.create_role(
+                name="🛡️ Support Manager",
+                color=discord.Color.from_rgb(230, 126, 34),
+                hoist=True,
+                mentionable=True,
+                reason="Official Support Server Setup"
             )
 
         agent_role = discord.utils.get(ctx.guild.roles, name="🛠️ Support Agent")
@@ -411,113 +430,167 @@ class ServerManagement(commands.Cog):
                 color=discord.Color.from_rgb(0, 210, 255),
                 hoist=True,
                 mentionable=True,
-                reason="Official Vortex Support HQ Setup"
+                reason="Official Support Server Setup"
             )
 
-        user_role = discord.utils.get(ctx.guild.roles, name="⚡ Vortex Community")
-        if not user_role:
-            user_role = await ctx.guild.create_role(
-                name="⚡ Vortex Community",
+        vip_role = discord.utils.get(ctx.guild.roles, name="💎 VIP Supporter")
+        if not vip_role:
+            vip_role = await ctx.guild.create_role(
+                name="💎 VIP Supporter",
                 color=discord.Color.from_rgb(155, 89, 182),
-                hoist=False,
-                reason="Official Vortex Support HQ Setup"
+                hoist=True,
+                reason="Official Support Server Setup"
             )
 
-        # Give author staff role
+        community_role = discord.utils.get(ctx.guild.roles, name="⚡ Community")
+        if not community_role:
+            community_role = await ctx.guild.create_role(
+                name="⚡ Community",
+                color=discord.Color.from_rgb(46, 204, 113),
+                hoist=True,
+                reason="Official Support Server Setup"
+            )
+
         try:
-            await ctx.author.add_roles(staff_role, agent_role)
+            await ctx.author.add_roles(founder_role, manager_role, agent_role)
         except Exception:
             pass
 
         await msg.edit(content=(
-            "⚡ **Configuring Official Vortex Support HQ**\n"
+            "⚡ **Constructing Enterprise Vortex Support HQ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            "🟢 `[Step 1/4]` Staff roles configured\n"
-            "🟡 `[Step 2/4]` **Creating Category & Channels** — Building official HQ hub...\n"
-            "⚪ `[Step 3/4]` Deploying Ticket Desk & Welcome Guides\n"
-            "⚪ `[Step 4/4]` Complete"
+            "🟢 `[Step 1/5]` Roles & permission hierarchy active\n"
+            "🟡 `[Step 2/5]` **Building Categories** — Creating 4 operational hubs...\n"
+            "⚪ `[Step 3/5]` Setting up channels & permission overrides\n"
+            "⚪ `[Step 4/5]` Deploying Ticket Desk & Welcome Guides\n"
+            "⚪ `[Step 5/5]` Complete"
         ))
 
-        # 2. Create Category & Channels
-        overwrites = {
-            ctx.guild.default_role: discord.PermissionOverwrite(read_messages=True, send_messages=True),
-            staff_role: discord.PermissionOverwrite(read_messages=True, send_messages=True, manage_messages=True),
-            agent_role: discord.PermissionOverwrite(read_messages=True, send_messages=True)
-        }
-
-        read_only_overwrites = {
+        # Permissions Overwrites
+        read_only = {
             ctx.guild.default_role: discord.PermissionOverwrite(read_messages=True, send_messages=False),
-            staff_role: discord.PermissionOverwrite(read_messages=True, send_messages=True, manage_messages=True)
+            founder_role: discord.PermissionOverwrite(read_messages=True, send_messages=True, manage_messages=True),
+            manager_role: discord.PermissionOverwrite(read_messages=True, send_messages=True, manage_messages=True),
+            agent_role: discord.PermissionOverwrite(read_messages=True, send_messages=False),
+        }
+        ticket_overwrites = {
+            ctx.guild.default_role: discord.PermissionOverwrite(read_messages=True, send_messages=False),
+            agent_role: discord.PermissionOverwrite(read_messages=True, send_messages=True),
+            manager_role: discord.PermissionOverwrite(read_messages=True, send_messages=True),
+            founder_role: discord.PermissionOverwrite(read_messages=True, send_messages=True),
+        }
+        standard_overwrites = {
+            ctx.guild.default_role: discord.PermissionOverwrite(read_messages=True, send_messages=True),
+            founder_role: discord.PermissionOverwrite(read_messages=True, send_messages=True, manage_messages=True),
         }
 
-        category = await ctx.guild.create_category("⚡ VORTEX SUPPORT HQ", overwrites=overwrites)
+        # 2. CATEGORY 1: INFORMATION & WELCOME
+        cat_info = await ctx.guild.create_category("📌 ━━ INFORMATION ━━", overwrites=read_only)
+        ch_welcome = await ctx.guild.create_text_channel("👋┃welcome", category=cat_info, overwrites=read_only)
+        ch_announcements = await ctx.guild.create_text_channel("📢┃announcements", category=cat_info, overwrites=read_only)
+        ch_rules = await ctx.guild.create_text_channel("📜┃rules-and-faq", category=cat_info, overwrites=read_only)
+        ch_links = await ctx.guild.create_text_channel("🔗┃official-links", category=cat_info, overwrites=read_only)
 
-        # Channels
-        announcements_ch = await ctx.guild.create_text_channel("📢┃announcements", category=category, overwrites=read_only_overwrites)
-        rules_ch = await ctx.guild.create_text_channel("📜┃rules-and-faq", category=category, overwrites=read_only_overwrites)
-        tickets_ch = await ctx.guild.create_text_channel("🎫┃support-tickets", category=category)
-        testing_ch = await ctx.guild.create_text_channel("🤖┃bot-commands", category=category)
-        suggestions_ch = await ctx.guild.create_text_channel("💡┃feature-requests", category=category)
-        lounge_ch = await ctx.guild.create_text_channel("💬┃community-chat", category=category)
+        # 3. CATEGORY 2: SUPPORT & HELP DESK
+        cat_support = await ctx.guild.create_category("🎫 ━━ SUPPORT DESK ━━", overwrites=standard_overwrites)
+        ch_tickets = await ctx.guild.create_text_channel("🎫┃open-a-ticket", category=cat_support, overwrites=ticket_overwrites)
+        ch_help = await ctx.guild.create_text_channel("❓┃community-help", category=cat_support)
+        ch_bugs = await ctx.guild.create_text_channel("🐛┃bug-reports", category=cat_support)
+        ch_suggestions = await ctx.guild.create_text_channel("💡┃feature-requests", category=cat_support)
+
+        # 4. CATEGORY 3: BOT PLAYGROUND & AI
+        cat_bot = await ctx.guild.create_category("🤖 ━━ BOT PLAYGROUND ━━", overwrites=standard_overwrites)
+        ch_cmds1 = await ctx.guild.create_text_channel("🤖┃bot-commands", category=cat_bot)
+        ch_ai = await ctx.guild.create_text_channel("🧠┃ai-chat-lounge", category=cat_bot)
+        ch_casino = await ctx.guild.create_text_channel("🎰┃casino-economy", category=cat_bot)
+        ch_rpg = await ctx.guild.create_text_channel("⚔️┃games-and-rpg", category=cat_bot)
+
+        # 5. CATEGORY 4: COMMUNITY & VOICE
+        cat_community = await ctx.guild.create_category("💬 ━━ COMMUNITY LOUNGE ━━", overwrites=standard_overwrites)
+        ch_chat = await ctx.guild.create_text_channel("💬┃general-chat", category=cat_community)
+        ch_memes = await ctx.guild.create_text_channel("📷┃media-and-memes", category=cat_community)
+        await ctx.guild.create_voice_channel("🔊┃Voice Lounge (01)", category=cat_community)
+        await ctx.guild.create_voice_channel("🎵┃Music Room (01)", category=cat_community)
 
         await msg.edit(content=(
-            "⚡ **Configuring Official Vortex Support HQ**\n"
+            "⚡ **Constructing Enterprise Vortex Support HQ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            "🟢 `[Step 1/4]` Staff roles configured\n"
-            "🟢 `[Step 2/4]` Channels created\n"
-            "🟡 `[Step 3/4]` **Deploying Ticket Desk & Guides** — Setting up interactive desks...\n"
-            "⚪ `[Step 4/4]` Complete"
+            "🟢 `[Step 1/5]` Roles & hierarchy active\n"
+            "🟢 `[Step 2/5]` 4 Categories created\n"
+            "🟢 `[Step 3/5]` 16 Channels & Voice rooms configured\n"
+            "🟡 `[Step 4/5]` **Deploying Ticket Desk & Guides** — Setting up interactive views...\n"
+            "⚪ `[Step 5/5]` Complete"
         ))
 
-        # 3. Post Announcement & Rules Embed
-        welcome_embed = discord.Embed(
+        # Welcome Guide
+        embed_welcome = discord.Embed(
             title="⚡ Welcome to the Official Vortex Discord Bot Support Server!",
             description=(
-                "**Vortex** is an enterprise-grade Discord bot featuring **Multi-Cloud AI (NVIDIA NIM 550B, DeepSeek-R1, Gemini 3.6)**, 24/7 Web Radios, Casino Economy, and Automated Anti-Raid Moderation.\n\n"
-                "**Quick Links:**\n"
+                "**Vortex** is an enterprise-grade multi-purpose Discord bot built for high-performance communities.\n\n"
+                "**Getting Started:**\n"
+                f"• 📜 Read server rules in {ch_rules.mention}\n"
+                f"• 🎫 Need support or help? Open a ticket in {ch_tickets.mention}\n"
+                f"• 🤖 Test 500+ bot commands in {ch_cmds1.mention}\n"
+                f"• 💡 Submit telemetry ideas in {ch_suggestions.mention}\n"
+                f"• 💬 Hangout with our community in {ch_chat.mention}\n\n"
+                "**Official Links:**\n"
                 "🌐 **Web Dashboard:** [vortex-bot-mmha.onrender.com](https://vortex-bot-mmha.onrender.com)\n"
-                "🤖 **Invite Bot:** [Add Vortex (OAuth2)](https://discord.com/oauth2/authorize?client_id=1464522902379561100&permissions=8&scope=bot%20applications.commands)\n"
-                "📚 **Command Center:** Type `&help` or view our web documentation."
+                "🤖 **Invite Bot:** [Add Vortex to Your Server](https://discord.com/oauth2/authorize?client_id=1464522902379561100&permissions=8&scope=bot%20applications.commands)"
             ),
             color=MAIN_COLOR,
             timestamp=datetime.now(timezone.utc),
         )
-        welcome_embed.set_footer(text="Official Vortex Support HQ • 24/7 Cloud Support")
-        await announcements_ch.send(embed=welcome_embed)
+        embed_welcome.set_footer(text="Official Vortex Support HQ • 24/7 High-Availability")
+        await ch_welcome.send(embed=embed_welcome)
 
-        rules_embed = discord.Embed(
-            title="📜 Official Support Server Guidelines & FAQ",
+        # Rules & FAQ
+        embed_rules = discord.Embed(
+            title="📜 Support Server Guidelines & Rules",
             description=(
-                "**1. Be Respectful**: Treat all members and staff with respect.\n"
-                "**2. Keep Bot Testing in <#" + str(testing_ch.id) + ">**: Run commands in dedicated bot channels.\n"
-                "**3. Need Help?**: Open a ticket in <#" + str(tickets_ch.id) + ">.\n"
-                "**4. Have Feature Ideas?**: Share user demand telemetry in <#" + str(suggestions_ch.id) + ">.\n"
-                "**5. Discord Guidelines**: Follow all official Discord Terms of Service."
+                "**1. Be Respectful**: Treat all members and staff with courtesy and professionalism.\n"
+                f"**2. Dedicated Bot Channels**: Please keep command testing and spam within {ch_cmds1.mention} and {ch_ai.mention}.\n"
+                f"**3. Ticket Protocol**: Open only 1 ticket at a time in {ch_tickets.mention}.\n"
+                "**4. No Self-Promotion / Advertising**: Keep all discussions relevant to Vortex and gaming.\n"
+                "**5. Discord Terms**: Strictly follow all Discord Community Guidelines and Terms of Service."
             ),
             color=INFO_COLOR,
         )
-        await rules_ch.send(embed=rules_embed)
+        await ch_rules.send(embed=embed_rules)
 
-        # 4. Deploy Interactive Ticket Desk
+        # Official Links
+        embed_links = discord.Embed(
+            title="🔗 Vortex Official Ecosystem Links",
+            description=(
+                "• 🌐 **Web Dashboard:** [vortex-bot-mmha.onrender.com](https://vortex-bot-mmha.onrender.com)\n"
+                "• 🤖 **OAuth2 Bot Invite:** [Invite Vortex](https://discord.com/oauth2/authorize?client_id=1464522902379561100&permissions=8&scope=bot%20applications.commands)\n"
+                "• 📜 **Terms of Service:** [Terms of Service](https://vortex-bot-mmha.onrender.com/tos)\n"
+                "• 🔒 **Privacy Policy:** [Privacy Policy](https://vortex-bot-mmha.onrender.com/privacy)\n"
+                "• 💻 **Source Repository:** [GitHub sohum123451/Vortex](https://github.com/sohum123451/Vortex)"
+            ),
+            color=SUCCESS_COLOR,
+        )
+        await ch_links.send(embed=embed_links)
+
+        # Deploy Interactive Ticket Desk
         tickets_cog = self.bot.get_cog("Tickets")
         if tickets_cog:
             try:
                 ticket_desk_embed = discord.Embed(
                     title="🎫 Vortex Official Support Desk",
                     description=(
-                        "Need assistance with bot configuration, custom server prefixes, AI integrations, or moderation?\n\n"
-                        "Click the **Open Ticket** button below to create a private support channel with our team!"
+                        "Need assistance with bot configuration, custom server prefixes, AI integrations, or reporting issues?\n\n"
+                        "Click the **Open Ticket** button below to create a private channel with our staff team!"
                     ),
-                    color=MAIN_COLOR
+                    color=MAIN_COLOR,
                 )
-                ticket_desk_embed.set_footer(text="Official Vortex Ticket System")
+                ticket_desk_embed.set_footer(text="Official Vortex Ticket System • Fast Response Times")
                 from cogs.tickets import TicketLauncher
-                await tickets_ch.send(embed=ticket_desk_embed, view=TicketLauncher())
+                await ch_tickets.send(embed=ticket_desk_embed, view=TicketLauncher())
             except Exception as te:
                 print(f"Ticket desk deployment notice: {te}")
 
-        # 5. Generate Permanent Invite & Store as Official Support Server
-        invite = await announcements_ch.create_invite(max_age=0, max_uses=0, reason="Official Support Server Invite")
+        # 6. Generate Permanent Invite & Store as Official Support Server
+        invite = await ch_welcome.create_invite(max_age=0, max_uses=0, reason="Official Support Server Invite")
         invite_url = invite.url
 
         with sqlite3.connect(DB_FILE) as conn:
@@ -533,20 +606,20 @@ class ServerManagement(commands.Cog):
             conn.commit()
 
         final_embed = discord.Embed(
-            title="🎉 Official Support Server Configured Successfully!",
+            title="🎉 Enterprise Support Server Ready for Launch!",
             description=(
-                f"**{ctx.guild.name}** is now registered as the **Official Support HQ of Vortex Bot**!\n\n"
-                f"• **Announcements:** {announcements_ch.mention}\n"
-                f"• **Rules & FAQ:** {rules_ch.mention}\n"
-                f"• **Support Ticket Desk:** {tickets_ch.mention}\n"
-                f"• **Bot Command Sandbox:** {testing_ch.mention}\n"
-                f"• **Feature Suggestions:** {suggestions_ch.mention}\n"
+                f"**{ctx.guild.name}** is now configured as the **Official Support Headquarters of Vortex Bot**!\n\n"
+                f"• **Welcome Hub:** {ch_welcome.mention}\n"
+                f"• **Announcements:** {ch_announcements.mention}\n"
+                f"• **Support Ticket Desk:** {ch_tickets.mention}\n"
+                f"• **Bot Command Sandbox:** {ch_cmds1.mention}\n"
+                f"• **AI Chat Lounge:** {ch_ai.mention}\n"
                 f"• **Permanent Invite URL:** [Join Support Server]({invite_url})"
             ),
             color=SUCCESS_COLOR,
             timestamp=datetime.now(timezone.utc),
         )
-        final_embed.set_footer(text="Use &support anywhere to fetch this invite link")
+        final_embed.set_footer(text="Use &support anywhere in any server to fetch this invite link")
         await msg.edit(content=None, embed=final_embed)
 
     @commands.hybrid_command(name="support", aliases=["supportserver", "helpserver", "officialserver"], description="Get the official Vortex Bot support server invite link")

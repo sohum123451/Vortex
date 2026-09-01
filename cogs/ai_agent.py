@@ -517,24 +517,27 @@ Generate the `run` async function:"""
         # 🛡️ STRICT ANTI-NUKE & ANTI-RAID DEFENSE INVARIANTS
         anti_nuke_violations = []
         lower_code = cleaned_code.lower()
+        is_server_owner = bool(ctx.guild and ctx.guild.owner_id == ctx.author.id)
 
-        # 1. Mass Channel Destruction Guard
-        if (".channels" in lower_code or "text_channels" in lower_code or "voice_channels" in lower_code) and ".delete(" in lower_code:
-            anti_nuke_violations.append("Mass Channel Deletion Loop detected")
+        # Anti-Nuke Checks (Bypassed for verified Bot Creator / Server Owner performing server remakes)
+        if not (is_owner or is_server_owner):
+            # 1. Mass Channel Destruction Guard
+            if (".channels" in lower_code or "text_channels" in lower_code or "voice_channels" in lower_code) and ".delete(" in lower_code:
+                anti_nuke_violations.append("Mass Channel Deletion Loop detected")
 
-        # 2. Mass Role Destruction Guard
-        if ".roles" in lower_code and ".delete(" in lower_code:
-            anti_nuke_violations.append("Mass Role Deletion Loop detected")
+            # 2. Mass Role Destruction Guard
+            if ".roles" in lower_code and ".delete(" in lower_code:
+                anti_nuke_violations.append("Mass Role Deletion Loop detected")
 
-        # 3. Mass Member Ban/Kick Guard
-        if (".members" in lower_code) and (".ban(" in lower_code or ".kick(" in lower_code):
-            anti_nuke_violations.append("Mass Member Ban/Kick Loop detected")
+            # 3. Mass Member Ban/Kick Guard
+            if (".members" in lower_code) and (".ban(" in lower_code or ".kick(" in lower_code):
+                anti_nuke_violations.append("Mass Member Ban/Kick Loop detected")
 
-        # 4. Mass Mention Broadcast Spam Guard
-        if ("@everyone" in lower_code or "@here" in lower_code) and ("for " in lower_code or "while " in lower_code):
-            anti_nuke_violations.append("Mass Mention Broadcast Spam Loop detected")
+            # 4. Mass Mention Broadcast Spam Guard
+            if ("@everyone" in lower_code or "@here" in lower_code) and ("for " in lower_code or "while " in lower_code):
+                anti_nuke_violations.append("Mass Mention Broadcast Spam Loop detected")
 
-        # 5. Token & Secret Extraction Guard
+        # 5. Token & Secret Extraction Guard (Strictly enforced for non-bot-owners)
         if not is_owner:
             blocked_keywords = [
                 "import os", "import sys", "import subprocess", "open(", "__import__",
