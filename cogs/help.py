@@ -288,8 +288,11 @@ def help_games_embed() -> discord.Embed:
 def help_server_embed() -> discord.Embed:
     e = base_embed("⚙️ Server, Tickets & Specialized Modules", "Announcements, role tools, support tickets, sports, and giveaways.", THEME_COLOR)
     e.add_field(
-        name="📢 Server Administration",
+        name="📢 Server Administration & Prefix",
         value=(
+            "• `&setprefix <prefix>` — **Change custom command prefix** for this server\n"
+            "• `&prefix` — View active prefix for this server\n"
+            "• `&resetprefix` — Reset server prefix back to default `&`\n"
             "• `&announce <#channel> <Title> | <Message>` — Send styled embed announcement\n"
             "• `&embed <Title> | <Desc> | [#HEX]` — Custom embed builder\n"
             "• `&poll <Question> | <Opt1> | <Opt2>` — Interactive reaction poll\n"
@@ -297,8 +300,7 @@ def help_server_embed() -> discord.Embed:
             "• `&rolecreate <name> [#hex]` / `&roledelete <role>`\n"
             "• `&roleadd <@user> <role>` / `&roleremove <@user> <role>`\n"
             "• `&role_all <role>` / `&role_bots <role>` — Mass role assignment\n"
-            "• `&channel_create <name> [text/voice]` / `&channel_delete` / `&channel_rename`\n"
-            "• `&server_emojis` — List server emojis"
+            "• `&channel_create <name> [text/voice]` / `&channel_delete` / `&channel_rename`"
         ),
         inline=False,
     )

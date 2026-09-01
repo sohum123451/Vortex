@@ -289,11 +289,92 @@ class ServerManagement(commands.Cog):
             roles = [r.name for r in ctx.guild.roles if r.name != "@everyone"]
             await ctx.reply(f"🎭 **Roles ({len(roles)}):** " + ", ".join(roles[:25]))
 
-    @commands.command(name="server_features_list", description="View enabled Discord server features")
-    async def server_features_list(self, ctx):
-        if ctx.guild:
-            feats = ctx.guild.features
-            await ctx.reply(f"🌟 **Features ({len(feats)}):** " + (", ".join(feats) if feats else "None"))
+    # =========================================================================
+    # ⚙️ CUSTOM SERVER PREFIX SYSTEM
+    # =========================================================================
+
+    @commands.hybrid_command(name="setprefix", description="Change the bot command prefix for this server: &setprefix <prefix>")
+    @commands.has_permissions(manage_guild=True)
+    async def setprefix(self, ctx, new_prefix: str):
+        """Changes the prefix used to invoke commands in this server."""
+        if not ctx.guild:
+            return await ctx.reply("❌ Custom prefixes can only be configured inside a Discord server.")
+        
+        clean_prefix = new_prefix.strip()
+        if len(clean_prefix) > 10:
+            return await ctx.reply("❌ Prefix cannot exceed 10 characters.")
+        if any(c.isspace() for c in clean_prefix):
+            return await ctx.reply("❌ Prefix cannot contain whitespace spaces.")
+
+        gid = str(ctx.guild.id)
+        with sqlite3.connect(DB_FILE) as conn:
+            cur = conn.cursor()
+            cur.execute("INSERT OR REPLACE INTO guild_prefixes (guild_id, prefix) VALUES (?, ?)", (gid, clean_prefix))
+            conn.commit()
+
+        # Update cache in main module
+        import main
+        main._prefix_cache[gid] = clean_prefix
+
+        embed = discord.Embed(
+            title="⚙️ Server Prefix Updated!",
+            description=(
+                f"✅ The command prefix for **{ctx.guild.name}** is now set to **`{clean_prefix}`**\n\n"
+                f"• Example: `{clean_prefix}help` or `{clean_prefix}ping`\n"
+                f"• You can also mention the bot anytime: {self.bot.user.mention} `help`\n"
+                f"• Reset anytime with: `{clean_prefix}resetprefix`"
+            ),
+            color=SUCCESS_COLOR,
+            timestamp=datetime.now(timezone.utc),
+        )
+        embed.set_footer(text=f"Changed by {ctx.author.display_name} • Default prefix '&' remains active")
+        await ctx.reply(embed=embed)
+
+    @commands.hybrid_command(name="prefix", description="View the current server command prefix")
+    async def view_prefix(self, ctx):
+        """Shows the active prefix configured for the server."""
+        if not ctx.guild:
+            return await ctx.reply("🤖 Default Prefix: `&`")
+        
+        gid = str(ctx.guild.id)
+        current = "&"
+        with sqlite3.connect(DB_FILE) as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT prefix FROM guild_prefixes WHERE guild_id = ?", (gid,))
+            row = cur.fetchone()
+            if row:
+                current = row[0]
+
+        embed = discord.Embed(
+            title="⚙️ Server Command Prefix",
+            description=(
+                f"The active prefix for **{ctx.guild.name}** is: **`{current}`**\n\n"
+                f"• Run commands like: `{current}help`\n"
+                f"• Change prefix (Admins): `{current}setprefix <new_prefix>`\n"
+                f"• Mention prefix: {self.bot.user.mention} `help`"
+            ),
+            color=MAIN_COLOR,
+            timestamp=datetime.now(timezone.utc),
+        )
+        await ctx.reply(embed=embed)
+
+    @commands.command(name="resetprefix", description="Reset server prefix back to default '&'")
+    @commands.has_permissions(manage_guild=True)
+    async def resetprefix(self, ctx):
+        """Resets the server prefix back to default '&'."""
+        if not ctx.guild:
+            return await ctx.reply("❌ This command must be used in a server.")
+        
+        gid = str(ctx.guild.id)
+        with sqlite3.connect(DB_FILE) as conn:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM guild_prefixes WHERE guild_id = ?", (gid,))
+            conn.commit()
+
+        import main
+        main._prefix_cache.pop(gid, None)
+
+        await ctx.reply("🔄 Prefix has been reset back to default: **`&`**")
 
 async def setup(bot):
     await bot.add_cog(ServerManagement(bot))

@@ -473,6 +473,35 @@ def get_rpg_players():
         
     return jsonify({"players": players})
 
+@app.route("/api/prefix", methods=["GET", "POST"])
+def api_guild_prefix():
+    guild_id = request.args.get("guild_id") or (request.json.get("guild_id") if request.is_json else None)
+    if not guild_id or not is_authorized(guild_id):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    if request.method == "GET":
+        with sqlite3.connect(DB_FILE) as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT prefix FROM guild_prefixes WHERE guild_id = ?", (str(guild_id),))
+            row = cur.fetchone()
+            current = row[0] if row else "&"
+        return jsonify({"guild_id": guild_id, "prefix": current})
+
+    if request.method == "POST":
+        data = request.json or {}
+        new_prefix = (data.get("prefix") or "&").strip()
+        if len(new_prefix) > 10 or any(c.isspace() for c in new_prefix):
+            return jsonify({"error": "Invalid prefix"}), 400
+
+        gid = str(guild_id)
+        with sqlite3.connect(DB_FILE) as conn:
+            cur = conn.cursor()
+            cur.execute("INSERT OR REPLACE INTO guild_prefixes (guild_id, prefix) VALUES (?, ?)", (gid, new_prefix))
+            conn.commit()
+
+        _prefix_cache[gid] = new_prefix
+        return jsonify({"success": True, "prefix": new_prefix})
+
 @app.route("/api/features/active")
 def get_active_features():
     guild_id = request.args.get("guild_id")
@@ -767,6 +796,12 @@ def init_db():
                 timestamp TEXT NOT NULL
             )
         """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS guild_prefixes (
+                guild_id TEXT PRIMARY KEY,
+                prefix TEXT NOT NULL
+            )
+        """)
 
         # Auto-migrate missing columns for existing economy table
         cur.execute("PRAGMA table_info(economy)")
@@ -887,11 +922,33 @@ class ErrorHandler(commands.Cog):
             pass
 
 # ==========================================
-# 🤖 BOT SETUP & COG AUTO-LOADER
+# 🤖 BOT SETUP & DYNAMIC PREFIX RESOLVER
 # ==========================================
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
+
+_prefix_cache = {}
+
+def get_guild_prefix(bot, message):
+    """Dynamic per-guild custom prefix resolver with in-memory caching."""
+    if not message.guild:
+        return commands.when_mentioned_or("&")(bot, message)
+    gid = str(message.guild.id)
+    if gid in _prefix_cache:
+        p = _prefix_cache[gid]
+        return commands.when_mentioned_or(p, "&")(bot, message)
+    
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT prefix FROM guild_prefixes WHERE guild_id = ?", (gid,))
+            row = cur.fetchone()
+            p = row[0] if row else "&"
+            _prefix_cache[gid] = p
+            return commands.when_mentioned_or(p, "&")(bot, message)
+    except Exception:
+        return commands.when_mentioned_or("&")(bot, message)
 
 class VortexBot(commands.Bot):
     async def setup_hook(self):
@@ -928,7 +985,7 @@ class VortexBot(commands.Bot):
             print(f"⚠️ Slash command sync warning: {e}", flush=True)
 
 bot = VortexBot(
-    command_prefix=commands.when_mentioned_or("&"),
+    command_prefix=get_guild_prefix,
     intents=intents,
     help_command=None,
 )

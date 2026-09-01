@@ -587,6 +587,19 @@
                         </form>
                     </div>
 
+                    <!-- Server Prefix Setup Panel -->
+                    <div class="data-box prefix-setup-box" style="margin-top: 1.5rem;">
+                        <h3><i class="fa-solid fa-gear"></i> Server Command Prefix</h3>
+                        <p style="color: var(--color-muted); font-size: 0.9rem; margin-bottom: 1rem;">Set a custom command prefix for this server. Default prefix is <code>&</code>.</p>
+                        <form id="prefix-config-form" onsubmit="event.preventDefault(); savePrefixConfig();">
+                            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                                <input type="text" id="server-prefix-input" value="&" maxlength="10" style="width: 140px; padding: 0.6rem 1rem; background: var(--bg-tertiary); color: var(--text-normal); border: 1px solid var(--border-subtle); border-radius: 6px; font-family: monospace; font-size: 1.1rem; font-weight: 700;">
+                                <button type="submit" style="padding: 0.6rem 1.2rem; background: var(--color-primary); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Save Prefix</button>
+                                <span id="prefix-config-status" style="font-size: 0.85rem; font-weight: 500;"></span>
+                            </div>
+                        </form>
+                    </div>
+
                     <!-- Feature Modules -->
                     <div class="data-box help-features-box" style="margin-top: 1.5rem;">
                         <h3>Active Bot Features</h3>
@@ -594,7 +607,23 @@
                         <div class="config-modules-grid">
                             <div class="module-card-status">
                                 <span class="dot active"></span>
-                                <span class="name">AI Engine (Gemini)</span>
+                                <span class="name">NVIDIA Nemotron 550B</span>
+                            </div>
+                            <div class="module-card-status">
+                                <span class="dot active"></span>
+                                <span class="name">DeepSeek-R1 (Groq)</span>
+                            </div>
+                            <div class="module-card-status">
+                                <span class="dot active"></span>
+                                <span class="name">Google Gemini 3.6</span>
+                            </div>
+                            <div class="module-card-status">
+                                <span class="dot active"></span>
+                                <span class="name">Flux Free AI Art</span>
+                            </div>
+                            <div class="module-card-status">
+                                <span class="dot active"></span>
+                                <span class="name">Custom Server Prefix</span>
                             </div>
                             <div class="module-card-status">
                                 <span class="dot active"></span>

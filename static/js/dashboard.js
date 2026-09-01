@@ -563,4 +563,67 @@ document.addEventListener("DOMContentLoaded", () => {
             statusSpan.textContent = "❌ Network error saving settings.";
         }
     };
+
+    window.fetchPrefixConfig = async function() {
+        const guildSelect = document.getElementById("music-guild-select");
+        const guildId = guildSelect ? guildSelect.value : null;
+        if (!guildId) return;
+
+        try {
+            const res = await fetch(`/api/prefix?guild_id=${guildId}`);
+            const data = await res.json();
+            if (data && data.prefix) {
+                const input = document.getElementById("server-prefix-input");
+                if (input) input.value = data.prefix;
+            }
+        } catch (err) {
+            console.error("Error loading prefix:", err);
+        }
+    };
+
+    window.savePrefixConfig = async function() {
+        const guildSelect = document.getElementById("music-guild-select");
+        const guildId = guildSelect ? guildSelect.value : null;
+        const statusSpan = document.getElementById("prefix-config-status");
+        const input = document.getElementById("server-prefix-input");
+        if (!guildId || !input) return;
+
+        const newPrefix = input.value.trim() || "&";
+        if (statusSpan) {
+            statusSpan.style.color = "#a0a0a0";
+            statusSpan.textContent = "Saving...";
+        }
+
+        try {
+            const res = await fetch("/api/prefix", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    guild_id: guildId,
+                    prefix: newPrefix
+                })
+            });
+
+            const data = await res.json();
+            if (data.success && statusSpan) {
+                statusSpan.style.color = "#1dd1a1";
+                statusSpan.textContent = `✅ Server prefix set to "${data.prefix}"!`;
+                setTimeout(() => { statusSpan.textContent = ""; }, 4000);
+            } else if (statusSpan) {
+                statusSpan.style.color = "#ff6b6b";
+                statusSpan.textContent = "❌ Failed to save prefix.";
+            }
+        } catch (err) {
+            if (statusSpan) {
+                statusSpan.style.color = "#ff6b6b";
+                statusSpan.textContent = "❌ Network error.";
+            }
+        }
+    };
+
+    // Auto-fetch prefix on initial load
+    setTimeout(() => {
+        if (window.fetchPrefixConfig) window.fetchPrefixConfig();
+    }, 1000);
 });
+

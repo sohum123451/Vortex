@@ -3,160 +3,825 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vortex Discord Bot — Dashboard</title>
-    <!-- FontAwesome Icons -->
+    <title>Vortex Discord Bot — Next-Gen Multi-Cloud AI & All-in-One Community Suite</title>
+    
+    <!-- Modern Google Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Pro 6 Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Stylesheet -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    
     <style>
+        :root {
+            --primary: #5865F2;
+            --primary-glow: rgba(88, 101, 242, 0.4);
+            --nvidia: #76B900;
+            --deepseek: #1ABC9C;
+            --gemini: #9B59B6;
+            --accent-cyan: #00D2FF;
+            --bg-dark: #0B0C0E;
+            --bg-card: rgba(26, 28, 32, 0.75);
+            --bg-card-hover: rgba(34, 37, 43, 0.9);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(88, 101, 242, 0.35);
+            --text-main: #F2F3F5;
+            --text-muted: #949BA4;
+            --font-heading: 'Outfit', sans-serif;
+            --font-body: 'Plus Jakarta Sans', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            line-height: 1.6;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Ambient Glow Backdrop */
+        .ambient-glow {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100vw;
+            max-width: 1400px;
+            height: 600px;
+            background: radial-gradient(circle at 50% 10%, rgba(88, 101, 242, 0.18) 0%, rgba(0, 210, 255, 0.08) 35%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Navigation Header */
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            background: rgba(11, 12, 14, 0.8);
+            border-bottom: 1px solid var(--border-glass);
+            padding: 16px 24px;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: #fff;
+            font-family: var(--font-heading);
+            font-weight: 800;
+            font-size: 1.4rem;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-icon {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent-cyan) 100%);
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
-            background-color: #111214;
-            margin: 0;
-            padding: 20px 16px;
-            color: #dbdee1;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-
-        .landing-container {
-            max-width: 640px;
-            width: 100%;
-            background: #2b2d31;
-            border: 1px solid #3f4147;
-            border-radius: 8px;
-            padding: 40px 32px;
-            text-align: center;
-        }
-
-        .landing-logo {
-            width: 48px;
-            height: 48px;
-            background: #5865f2;
-            border-radius: 12px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
+            font-size: 1.1rem;
             color: #fff;
-            font-size: 1.5rem;
-            margin-bottom: 20px;
+            box-shadow: 0 4px 14px var(--primary-glow);
         }
 
-        .landing-title {
-            font-size: 1.8rem;
-            font-weight: 700;
-            line-height: 1.25;
-            margin-bottom: 10px;
-            color: #f2f3f5;
-        }
-
-        .landing-subtitle {
-            font-size: 0.95rem;
-            color: #949ba4;
-            line-height: 1.55;
-            margin-bottom: 28px;
-        }
-
-        .login-btn {
-            display: inline-flex;
+        .nav-links {
+            display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 10px;
-            background: #5865f2;
-            color: #fff;
-            padding: 12px 28px;
-            border-radius: 4px;
+            gap: 24px;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
             font-weight: 600;
             font-size: 0.95rem;
+            transition: color 0.2s ease;
+        }
+
+        .nav-link:hover {
+            color: #fff;
+        }
+
+        .nav-btn {
+            background: var(--primary);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
             text-decoration: none;
-            transition: background 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px var(--primary-glow);
         }
 
-        .login-btn:hover {
+        .nav-btn:hover {
             background: #4752c4;
+            transform: translateY(-1px);
         }
 
+        /* Hero Section */
+        .hero {
+            position: relative;
+            z-index: 1;
+            padding: 80px 24px 60px;
+            text-align: center;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            border-radius: 99px;
+            background: rgba(88, 101, 242, 0.12);
+            border: 1px solid rgba(88, 101, 242, 0.3);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #A3AAFF;
+            margin-bottom: 24px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #2ECC71;
+            box-shadow: 0 0 8px #2ECC71;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .hero-title {
+            font-family: var(--font-heading);
+            font-size: 3.6rem;
+            font-weight: 900;
+            line-height: 1.15;
+            letter-spacing: -1.5px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #FFFFFF 0%, #E0E4EC 50%, #9FB2FF 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            max-width: 720px;
+            margin: 0 auto 36px;
+            line-height: 1.6;
+        }
+
+        .hero-cta-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 50px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #5865F2 0%, #4752C4 100%);
+            color: #fff;
+            padding: 15px 32px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1.05rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.25s ease;
+            box-shadow: 0 8px 24px var(--primary-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(88, 101, 242, 0.6);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-glass);
+            color: #fff;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1.05rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            backdrop-filter: blur(10px);
+            transition: all 0.25s ease;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Metrics Strip */
+        .metrics-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            max-width: 1000px;
+            margin: 0 auto 80px;
+            padding: 0 24px;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            padding: 22px 18px;
+            border-radius: 12px;
+            text-align: center;
+            backdrop-filter: blur(12px);
+        }
+
+        .metric-value {
+            font-family: var(--font-heading);
+            font-size: 2rem;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .metric-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Section Layout */
+        .section-container {
+            max-width: 1200px;
+            margin: 0 auto 90px;
+            padding: 0 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .section-tag {
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .section-title {
+            font-family: var(--font-heading);
+            font-size: 2.4rem;
+            font-weight: 800;
+            letter-spacing: -0.8px;
+            color: #fff;
+            margin-bottom: 12px;
+        }
+
+        .section-desc {
+            font-size: 1.05rem;
+            color: var(--text-muted);
+            max-width: 640px;
+            margin: 0 auto;
+        }
+
+        /* Feature Cards Grid */
         .features-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-top: 32px;
-            padding-top: 24px;
-            border-top: 1px solid #3f4147;
+            gap: 20px;
+        }
+
+        .feature-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 14px;
+            padding: 28px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-box:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-glow);
+            transform: translateY(-4px);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .feature-icon-wrap {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+        }
+
+        .f-icon-ai { background: rgba(155, 89, 182, 0.15); color: #9B59B6; }
+        .f-icon-nv { background: rgba(118, 185, 0, 0.15); color: #76B900; }
+        .f-icon-mod { background: rgba(237, 66, 69, 0.15); color: #ED4245; }
+        .f-icon-music { background: rgba(0, 210, 255, 0.15); color: #00D2FF; }
+        .f-icon-rpg { background: rgba(241, 196, 15, 0.15); color: #F1C40F; }
+        .f-icon-prefix { background: rgba(46, 204, 113, 0.15); color: #2ECC71; }
+
+        .feature-heading {
+            font-family: var(--font-heading);
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        .feature-text {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            line-height: 1.55;
+            margin-bottom: 16px;
+        }
+
+        .feature-cmd-badge {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.06);
+            color: #C0C8E0;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Interactive Command Search Section */
+        .cmd-explorer-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: 36px;
+            backdrop-filter: blur(14px);
+        }
+
+        .search-bar-wrap {
+            position: relative;
+            margin-bottom: 24px;
+        }
+
+        .search-input {
+            width: 100%;
+            background: rgba(15, 16, 19, 0.9);
+            border: 1px solid var(--border-glass);
+            border-radius: 10px;
+            padding: 16px 20px 16px 48px;
+            color: #fff;
+            font-size: 1rem;
+            font-family: var(--font-body);
+            transition: border-color 0.2s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.2);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .filter-tags {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 28px;
+        }
+
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-glass);
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn.active, .filter-btn:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .cmd-table-container {
+            max-height: 440px;
+            overflow-y: auto;
+            border: 1px solid var(--border-glass);
+            border-radius: 10px;
+        }
+
+        .cmd-table {
+            width: 100%;
+            border-collapse: collapse;
             text-align: left;
         }
 
-        .feature-item {
-            background: #1e1f22;
-            border: 1px solid #35373c;
-            padding: 16px 14px;
-            border-radius: 6px;
-        }
-
-        .feature-title {
-            font-weight: 600;
-            font-size: 0.9rem;
-            color: #f2f3f5;
-            margin-bottom: 4px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .feature-title i {
-            color: #5865f2;
+        .cmd-table th {
+            background: rgba(20, 22, 26, 0.95);
+            padding: 14px 18px;
             font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 2;
         }
 
-        .feature-desc {
-            font-size: 0.8rem;
-            color: #949ba4;
-            line-height: 1.4;
+        .cmd-table td {
+            padding: 14px 18px;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 0.92rem;
         }
 
-        @media (max-width: 600px) {
-            .landing-container {
-                padding: 28px 18px;
-            }
-            .landing-title {
-                font-size: 1.5rem;
-            }
-            .features-grid {
-                grid-template-columns: 1fr;
-            }
+        .cmd-table tr:hover td {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .cmd-code {
+            font-family: var(--font-mono);
+            font-weight: 600;
+            color: #7986FF;
+            background: rgba(88, 101, 242, 0.12);
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        .cmd-cat-badge {
+            font-size: 0.78rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-muted);
+        }
+
+        /* Footer */
+        .footer {
+            border-top: 1px solid var(--border-glass);
+            padding: 48px 24px 36px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 20px;
+        }
+
+        .footer-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .footer-link:hover {
+            color: #fff;
+        }
+
+        @media (max-width: 900px) {
+            .hero-title { font-size: 2.6rem; }
+            .features-grid { grid-template-columns: 1fr; }
+            .metrics-strip { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
 </head>
 <body>
-    <div class="landing-container">
-        <div class="landing-logo">
-            <i class="fa-solid fa-bolt"></i>
+
+    <div class="ambient-glow"></div>
+
+    <!-- 🧭 Top Navigation -->
+    <header class="navbar">
+        <div class="nav-container">
+            <a href="/" class="brand-logo">
+                <span class="brand-icon"><i class="fa-solid fa-bolt"></i></span>
+                <span>VORTEX</span>
+            </a>
+            <div class="nav-links">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#ai-ecosystem" class="nav-link">Multi-Cloud AI</a>
+                <a href="#commands" class="nav-link">Commands</a>
+                <a href="/login" class="nav-btn">
+                    <i class="fa-brands fa-discord"></i>
+                    <span>Dashboard</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 🚀 Hero Section -->
+    <section class="hero">
+        <div class="status-badge">
+            <span class="status-dot"></span>
+            <span>All Systems Operational • Multi-Cloud Cloud Active</span>
         </div>
 
-        <h1 class="landing-title">Vortex Server Dashboard</h1>
-        <p class="landing-subtitle">A web control panel to manage music queues, check server leaderboards, monitor moderation logs, and view bot commands.</p>
+        <h1 class="hero-title">The Next-Gen Multi-Cloud AI Discord Super-Bot</h1>
         
-        <a href="/login" class="login-btn">
-            <i class="fa-brands fa-discord"></i>
-            <span>Log In with Discord</span>
-        </a>
+        <p class="hero-subtitle">
+            Powered by <strong>NVIDIA Nemotron 3 Ultra 550B</strong>, <strong>DeepSeek-R1</strong>, <strong>Google Gemini 3.6</strong>, <strong>Groq LPUs</strong>, automated moderation, casino economy, voice music, and custom server prefixes.
+        </p>
 
-        <div class="features-grid">
-            <div class="feature-item">
-                <div class="feature-title"><i class="fa-solid fa-music"></i> Music Control</div>
-                <p class="feature-desc">Manage voice playback and 24/7 web radios.</p>
-            </div>
-            <div class="feature-item">
-                <div class="feature-title"><i class="fa-solid fa-shield-halved"></i> Mod History</div>
-                <p class="feature-desc">Check active warnings and temporary bans.</p>
-            </div>
-            <div class="feature-item">
-                <div class="feature-title"><i class="fa-solid fa-trophy"></i> Leaderboards</div>
-                <p class="feature-desc">View top active and wealthiest server members.</p>
-            </div>
+        <div class="hero-cta-group">
+            <a href="https://discord.com/oauth2/authorize?client_id=1464522902379561100&permissions=8&scope=bot%20applications.commands" class="btn-primary" target="_blank">
+                <i class="fa-brands fa-discord"></i>
+                <span>Add to Discord</span>
+            </a>
+            <a href="/login" class="btn-secondary">
+                <i class="fa-solid fa-gauge-high"></i>
+                <span>Open Server Dashboard</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- 📊 Live Metrics Strip -->
+    <div class="metrics-strip">
+        <div class="metric-card">
+            <div class="metric-value">640+</div>
+            <div class="metric-label">Commands & Aliases</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">18+</div>
+            <div class="metric-label">Active AI Models</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">4 Tiers</div>
+            <div class="metric-label">Failover Cloud Pool</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">0ms</div>
+            <div class="metric-label">LRU Cache Latency</div>
         </div>
     </div>
+
+    <!-- 🧠 Multi-Cloud AI & Feature Grid -->
+    <section id="features" class="section-container">
+        <div class="section-header">
+            <span class="section-tag">Enterprise Capabilities</span>
+            <h2 class="section-title">Built for Modern Discord Communities</h2>
+            <p class="section-desc">Unifying cutting-edge AI research with high-octane community entertainment and robust administration.</p>
+        </div>
+
+        <div class="features-grid">
+            <!-- Feature 1 -->
+            <div class="feature-box">
+                <div class="feature-icon-wrap f-icon-nv">
+                    <i class="fa-solid fa-microchip"></i>
+                </div>
+                <h3 class="feature-heading">NVIDIA Nemotron 550B & 1M Context</h3>
+                <p class="feature-text">Access massive 550B parameter enterprise reasoning models powered by the NVIDIA NIM cloud platform with 1,000,000 token context windows.</p>
+                <span class="feature-cmd-badge">&nemotron &lt;prompt&gt;</span>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="feature-box">
+                <div class="feature-icon-wrap f-icon-ai">
+                    <i class="fa-solid fa-brain"></i>
+                </div>
+                <h3 class="feature-heading">DeepSeek-R1 Step-by-Step Reasoning</h3>
+                <p class="feature-text">Execute complex chain-of-thought mathematical deductions, algorithmic logic, and code optimization running on Groq LPUs at 500 tok/sec.</p>
+                <span class="feature-cmd-badge">&deepseek &lt;problem&gt;</span>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="feature-box">
+                <div class="feature-icon-wrap f-icon-prefix">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                </div>
+                <h3 class="feature-heading">Free High-Res AI Art Generator</h3>
+                <p class="feature-text">Generate photorealistic Flux and SDXL digital artwork directly inside Discord with unlimited keyless cloud inference.</p>
+                <span class="feature-cmd-badge">&imagine &lt;prompt&gt;</span>
+            </div>
+
+            <!-- Feature 4 -->
+            <div class="feature-box">
+                <div class="feature-icon-wrap f-icon-prefix">
+                    <i class="fa-solid fa-gear"></i>
+                </div>
+                <h3 class="feature-heading">Custom Server Prefixes</h3>
+                <p class="feature-text">Configure server-specific custom prefixes stored in lightning-fast cloud databases. Mention prefixes and resets are always supported.</p>
+                <span class="feature-cmd-badge">&setprefix &lt;prefix&gt;</span>
+            </div>
+
+            <!-- Feature 5 -->
+            <div class="feature-box">
+                <div class="feature-icon-wrap f-icon-mod">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h3 class="feature-heading">Automated Moderation & Anti-Raid</h3>
+                <p class="feature-text">AutoMod filters, spam interceptors, mass-ban raid blockers, temporary timeouts, warnings tracking, and audit log channels.</p>
+                <span class="feature-cmd-badge">&kick, &ban, &timeout</span>
+            </div>
+
+            <!-- Feature 6 -->
+            <div class="feature-box">
+                <div class="feature-icon-wrap f-icon-music">
+                    <i class="fa-solid fa-music"></i>
+                </div>
+                <h3 class="feature-heading">Crystal Clear Music & 24/7 Radio</h3>
+                <p class="feature-text">Stream high-bitrate music from YouTube and SoundCloud with interactive queuing, volume controls, and continuous lofi stations.</p>
+                <span class="feature-cmd-badge">&play, &queue, &radio</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- 🔍 Interactive Command Explorer -->
+    <section id="commands" class="section-container">
+        <div class="section-header">
+            <span class="section-tag">Interactive Roster</span>
+            <h2 class="section-title">Explore 640+ Commands</h2>
+            <p class="section-desc">Search through Vortex's extensive arsenal across 25 modular categories.</p>
+        </div>
+
+        <div class="cmd-explorer-card">
+            <div class="search-bar-wrap">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="cmdSearchInput" class="search-input" placeholder="Search commands (e.g. setprefix, nemotron, imagine, play, balance)...">
+            </div>
+
+            <div class="filter-tags" id="categoryFilters">
+                <button class="filter-btn active" data-cat="all">All Commands</button>
+                <button class="filter-btn" data-cat="ai">AI Suite</button>
+                <button class="filter-btn" data-cat="server">Server & Prefix</button>
+                <button class="filter-btn" data-cat="moderation">Moderation</button>
+                <button class="filter-btn" data-cat="music">Music</button>
+                <button class="filter-btn" data-cat="economy">Economy</button>
+                <button class="filter-btn" data-cat="games">Games & Fun</button>
+                <button class="filter-btn" data-cat="utility">Utility</button>
+            </div>
+
+            <div class="cmd-table-container">
+                <table class="cmd-table">
+                    <thead>
+                        <tr>
+                            <th>Command</th>
+                            <th>Category</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cmdTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 📜 Footer -->
+    <footer class="footer">
+        <div class="footer-links">
+            <a href="/login" class="footer-link">Dashboard</a>
+            <a href="https://discord.com/oauth2/authorize?client_id=1464522902379561100&permissions=8&scope=bot%20applications.commands" class="footer-link" target="_blank">Invite Bot</a>
+            <a href="/PRIVACY_POLICY.md" class="footer-link">Privacy Policy</a>
+            <a href="/TOS.md" class="footer-link">Terms of Service</a>
+        </div>
+        <p>© 2026 Vortex Discord Bot. Engineered by Sohum. Powered by Render & Multi-Cloud AI.</p>
+    </footer>
+
+    <!-- Interactive Search Script -->
+    <script>
+        const COMMANDS_DATA = [
+            { name: "&setprefix", cat: "server", desc: "Change the command prefix for the current server" },
+            { name: "&prefix", cat: "server", desc: "View the active command prefix for this server" },
+            { name: "&resetprefix", cat: "server", desc: "Reset the server prefix back to default '&'" },
+            { name: "&nemotron", cat: "ai", desc: "Chat with NVIDIA Nemotron 3 Ultra 550B enterprise AI" },
+            { name: "&deepseek", cat: "ai", desc: "Deep step-by-step logic and math reasoning via DeepSeek-R1" },
+            { name: "&imagine", cat: "ai", desc: "Generate free high-resolution Flux & SDXL digital artwork" },
+            { name: "&models", cat: "ai", desc: "View all 18+ active AI models across Google, NVIDIA, and Groq" },
+            { name: "&model_chat", cat: "ai", desc: "Query a specific AI model (nemotron, deepseek, llama3, gemma, gpt4)" },
+            { name: "&ask_web", cat: "ai", desc: "Live web search and real-time AI fact synthesis" },
+            { name: "&do", cat: "ai", desc: "Zero-shot dynamic autonomous server actions" },
+            { name: "&chat", cat: "ai", desc: "High-speed conversational intelligence with Gemini 3.6" },
+            { name: "&ask", cat: "ai", desc: "Multimodal image Q&A (attach image + &ask question)" },
+            { name: "&play", cat: "music", desc: "Play high-bitrate music from YouTube, SoundCloud, or search" },
+            { name: "&queue", cat: "music", desc: "Display all songs queued in the server playlist" },
+            { name: "&pause / &resume", cat: "music", desc: "Pause or resume voice audio playback" },
+            { name: "&skip / &stop", cat: "music", desc: "Skip current song or clear the entire playlist queue" },
+            { name: "&radio", cat: "music", desc: "Play 24/7 nonstop curated web radio stations" },
+            { name: "&kick / &ban", cat: "moderation", desc: "Kick or ban a member from the server" },
+            { name: "&timeout", cat: "moderation", desc: "Temporarily mute a member with automated timer" },
+            { name: "&warn / &warnings", cat: "moderation", desc: "Issue warnings and check disciplinary history" },
+            { name: "&purge", cat: "moderation", desc: "Bulk delete specified number of messages" },
+            { name: "&balance / &daily", cat: "economy", desc: "Check wallet/bank cash and claim daily coin rewards" },
+            { name: "&work / &crime", cat: "economy", desc: "Earn cash through legal work or high-stakes crime" },
+            { name: "&blackjack / &slots", cat: "economy", desc: "Interactive casino mini-games with button controls" },
+            { name: "&rob / &pay", cat: "economy", desc: "Steal from members or transfer funds securely" },
+            { name: "&tictactoe / &rps", cat: "games", desc: "Play 2-player interactive button grid minigames" },
+            { name: "&tod / &truth / &dare", cat: "games", desc: "AI-powered Truth or Dare multiplayer lobbies" },
+            { name: "&wyr", cat: "games", desc: "Dynamic AI Would You Rather dilemmas with voting buttons" },
+            { name: "&tarot / &horoscope", cat: "games", desc: "Mystical AI tarot card readings and astrological horoscopes" },
+            { name: "&announce", cat: "server", desc: "Broadcast styled announcement embeds to designated channels" },
+            { name: "&poll", cat: "server", desc: "Create interactive multi-option reaction polls" },
+            { name: "&ticket_setup", cat: "server", desc: "Deploy interactive support ticket desks with buttons" },
+            { name: "&calc / &weather", cat: "utility", desc: "Safe math calculator and live global weather forecasts" },
+            { name: "&crypto", cat: "utility", desc: "Real-time cryptocurrency prices, 24h trends, and market caps" },
+            { name: "&remind / &afk", cat: "utility", desc: "Personal timed reminder notifications and AFK status" },
+            { name: "&snipe / &editsnipe", cat: "utility", desc: "Recover recently deleted or edited messages in channel" }
+        ];
+
+        const tableBody = document.getElementById("cmdTableBody");
+        const searchInput = document.getElementById("cmdSearchInput");
+        const filterBtns = document.querySelectorAll(".filter-btn");
+
+        let currentCat = "all";
+
+        function renderCommands() {
+            const query = searchInput.value.toLowerCase().trim();
+            const filtered = COMMANDS_DATA.filter(cmd => {
+                const matchesCat = (currentCat === "all" || cmd.cat === currentCat);
+                const matchesQuery = cmd.name.toLowerCase().includes(query) || cmd.desc.toLowerCase().includes(query);
+                return matchesCat && matchesQuery;
+            });
+
+            tableBody.innerHTML = filtered.map(c => `
+                <tr>
+                    <td><span class="cmd-code">${c.name}</span></td>
+                    <td><span class="cmd-cat-badge">${c.cat.toUpperCase()}</span></td>
+                    <td>${c.desc}</td>
+                </tr>
+            `).join("");
+
+            if (filtered.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#949BA4; padding:30px;">No matching commands found.</td></tr>`;
+            }
+        }
+
+        searchInput.addEventListener("input", renderCommands);
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener("click", () => {
+                filterBtns.forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                currentCat = btn.dataset.cat;
+                renderCommands();
+            });
+        });
+
+        renderCommands();
+    </script>
 </body>
 </html>
