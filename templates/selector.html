@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Stylesheet -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=3.0">
     
     <style>
         body {
@@ -275,7 +275,7 @@
 
     <div class="guilds-grid">
         {% for g in guilds %}
-            <div class="guild-card">
+            <div class="guild-card" data-guild-id="{{ g.id }}">
                 {% if g.icon %}
                     <img src="https://cdn.discordapp.com/icons/{{ g.id }}/{{ g.icon }}.png" class="guild-icon-large" alt="{{ g.name }}">
                 {% else %}
@@ -290,7 +290,7 @@
                         <span>Manage Server</span>
                     </a>
                 {% else %}
-                    <a href="{{ g.invite_url }}" class="btn-invite-server" target="_blank">
+                    <a href="{{ g.invite_url }}" class="btn-invite-server" data-action="invite" target="_blank">
                         <i class="fa-solid fa-plus"></i>
                         <span>Invite Vortex</span>
                     </a>
@@ -299,5 +299,34 @@
         {% endfor %}
     </div>
 
+    <!-- Live Guild State Sync -->
+    <script>
+        async function syncBotGuilds() {
+            try {
+                const res = await fetch("/api/bot_guilds");
+                const data = await res.json();
+                if (data && data.guild_ids) {
+                    const activeSet = new Set(data.guild_ids);
+                    document.querySelectorAll(".guild-card").forEach(card => {
+                        const gid = card.dataset.guildId;
+                        if (activeSet.has(gid)) {
+                            const btn = card.querySelector("[data-action='invite']");
+                            if (btn) {
+                                btn.className = "btn-manage-server";
+                                btn.removeAttribute("data-action");
+                                btn.removeAttribute("target");
+                                btn.href = `/dashboard?guild_id=${gid}`;
+                                btn.innerHTML = `<i class="fa-solid fa-sliders"></i><span>Manage Server</span>`;
+                            }
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("Guild sync error:", e);
+            }
+        }
+        syncBotGuilds();
+        setInterval(syncBotGuilds, 3000);
+    </script>
 </body>
 </html>

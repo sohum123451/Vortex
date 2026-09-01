@@ -120,17 +120,62 @@ def logout():
     session.clear()
     return redirect("/")
 
+@app.route("/api/bot_guilds")
+def api_bot_guilds():
+    """Returns list of all active guild IDs the bot is currently in."""
+    active_ids = []
+    if bot.is_ready():
+        active_ids = [str(g.id) for g in bot.guilds]
+    
+    # Fallback to known guilds from database
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT DISTINCT guild_id FROM levels
+                UNION
+                SELECT DISTINCT guild_id FROM guild_prefixes
+                UNION
+                SELECT DISTINCT guild_id FROM tempbans
+            """)
+            db_ids = [str(row[0]) for row in cur.fetchall() if row[0]]
+            active_ids = list(set(active_ids + db_ids))
+    except Exception:
+        pass
+        
+    return jsonify({"guild_ids": active_ids})
+
 @app.route("/selector")
 def selector():
     if "user" not in session:
         return redirect("/login")
         
     user_guilds = session.get("guilds", [])
-    bot_guilds = [str(g.id) for g in bot.guilds] if bot.is_ready() else []
+    
+    # Query bot guilds from memory + DB cache
+    bot_guilds = set()
+    if bot.is_ready():
+        bot_guilds = {str(g.id) for g in bot.guilds}
+    
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT DISTINCT guild_id FROM levels
+                UNION
+                SELECT DISTINCT guild_id FROM guild_prefixes
+                UNION
+                SELECT DISTINCT guild_id FROM tempbans
+            """)
+            for row in cur.fetchall():
+                if row[0]:
+                    bot_guilds.add(str(row[0]))
+    except Exception:
+        pass
     
     guild_list = []
     for g in user_guilds:
-        guild_id = g["id"]
+        guild_id = str(g["id"])
         has_bot = guild_id in bot_guilds
         invite_url = f"https://discord.com/api/oauth2/authorize?client_id={DISCORD_CLIENT_ID}&permissions=8&scope=bot%20applications.commands&guild_id={guild_id}&disable_guild_select=true"
         
