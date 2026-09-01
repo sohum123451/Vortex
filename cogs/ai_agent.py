@@ -29,6 +29,27 @@ class AIAgent(commands.Cog):
 
     async def _call_ai(self, prompt: str, system_instruction: str = "") -> str:
         """Bulletproof multi-cloud AI inference router for code generation and self-healing."""
+        # Tier 0: OmniRoute AI Gateway (Local/Self-Hosted Proxy)
+        omniroute_url = os.getenv("OMNIROUTE_BASE_URL")
+        if omniroute_url:
+            try:
+                headers = {"Content-Type": "application/json"}
+                messages = []
+                if system_instruction:
+                    messages.append({"role": "system", "content": system_instruction})
+                messages.append({"role": "user", "content": prompt})
+                payload = {"model": "auto", "messages": messages, "max_tokens": 2500, "temperature": 0.2}
+                endpoint = f"{omniroute_url.rstrip('/')}/chat/completions"
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(endpoint, headers=headers, json=payload, timeout=12) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            content = data["choices"][0]["message"]["content"]
+                            if content and content.strip():
+                                return content.strip()
+            except Exception:
+                pass
+
         # Tier 1: NVIDIA NIM (Nemotron 120B / LLaMA 3.2 11B / Nemotron 340B)
         nv_key = os.getenv("NVIDIA_API_KEY")
         if nv_key:

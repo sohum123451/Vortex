@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Custom Style -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=4.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/cursor-effects.css') }}?v=1.0">
 </head>
 <body data-guild-id="{{ guild.id }}">
     <!-- 📱 MOBILE TOPBAR -->
@@ -617,5 +618,6 @@
 
     <!-- Script loading -->
     <script src="{{ url_for('static', filename='js/dashboard.js') }}?v=3.5"></script>
+    <script src="{{ url_for('static', filename='js/cursor-effects.js') }}?v=1.0"></script>
 </body>
 </html>

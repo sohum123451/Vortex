@@ -1,0 +1,168 @@
+/* ==========================================================================
+   ⚡ VORTEX INTERACTIVE CURSOR TRACKING & EMIL KOWALSKI MOTION SYSTEM
+   Physics-based cursor follower, dynamic card spotlighting & magnetic states
+   ========================================================================== */
+
+/* Cursor Elements (Hidden on touch devices) */
+.cursor-dot {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 8px;
+    height: 8px;
+    background: #00D2FF;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 99999;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 10px #00D2FF, 0 0 20px rgba(0, 210, 255, 0.6);
+    transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
+                height 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                background 0.2s ease,
+                opacity 0.3s ease;
+}
+
+.cursor-follower {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 36px;
+    height: 36px;
+    border: 1.5px solid rgba(88, 101, 242, 0.5);
+    background: radial-gradient(circle, rgba(88, 101, 242, 0.15) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 99998;
+    transform: translate(-50%, -50%);
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
+    transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
+                height 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
+                border-color 0.3s ease,
+                background 0.3s ease,
+                transform 0.15s ease-out,
+                opacity 0.3s ease;
+}
+
+/* Hover States for Cursor Follower */
+body.cursor-hover .cursor-dot {
+    width: 12px;
+    height: 12px;
+    background: #5865F2;
+    box-shadow: 0 0 16px #5865F2, 0 0 30px rgba(88, 101, 242, 0.8);
+}
+
+body.cursor-hover .cursor-follower {
+    width: 60px;
+    height: 60px;
+    border-color: rgba(0, 210, 255, 0.8);
+    background: radial-gradient(circle, rgba(0, 210, 255, 0.2) 0%, rgba(88, 101, 242, 0.1) 70%);
+}
+
+body.cursor-click .cursor-dot {
+    transform: translate(-50%, -50%) scale(0.6);
+}
+
+body.cursor-click .cursor-follower {
+    transform: translate(-50%, -50%) scale(0.85);
+}
+
+/* Dynamic Cursor Background Spotlight */
+.cursor-ambient-spotlight {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 1;
+    background: radial-gradient(
+        700px circle at var(--cursor-x, 50vw) var(--cursor-y, 50vh),
+        rgba(88, 101, 242, 0.08) 0%,
+        rgba(0, 210, 255, 0.03) 30%,
+        transparent 75%
+    );
+    transition: opacity 0.4s ease;
+}
+
+/* ==========================================================================
+   ✨ CARD SPOTLIGHT SHINE (Refraction under glass on cursor move)
+   ========================================================================== */
+
+.spotlight-card,
+.feature-card,
+.ai-badge,
+.dash-card,
+.stat-card,
+.tech-card,
+.quick-action-btn,
+.nav-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.spotlight-card::before,
+.feature-card::before,
+.ai-badge::before,
+.dash-card::before,
+.stat-card::before,
+.tech-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(
+        400px circle at var(--mouse-x, -500px) var(--mouse-y, -500px),
+        rgba(255, 255, 255, 0.07) 0%,
+        rgba(88, 101, 242, 0.08) 30%,
+        transparent 80%
+    );
+    opacity: 0;
+    transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+    z-index: 1;
+    border-radius: inherit;
+}
+
+.spotlight-card:hover::before,
+.feature-card:hover::before,
+.ai-badge:hover::before,
+.dash-card:hover::before,
+.stat-card:hover::before,
+.tech-card:hover::before {
+    opacity: 1;
+}
+
+/* Magnetic Button Spring Polish */
+.magnetic-btn,
+.btn-primary,
+.nav-btn,
+.hero-btn-primary,
+.hero-btn-secondary,
+.filter-btn {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                background 0.2s ease,
+                border-color 0.2s ease;
+    will-change: transform;
+}
+
+.magnetic-btn:active,
+.btn-primary:active,
+.nav-btn:active,
+.hero-btn-primary:active,
+.hero-btn-secondary:active,
+.filter-btn:active {
+    transform: scale(0.96) !important;
+}
+
+/* Hide custom cursor on mobile touch screens */
+@media (hover: none) and (pointer: coarse) {
+    .cursor-dot,
+    .cursor-follower,
+    .cursor-ambient-spotlight {
+        display: none !important;
+    }
+}

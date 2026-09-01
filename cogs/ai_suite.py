@@ -20,7 +20,28 @@ class AISuite(commands.Cog):
         self.user_memory = {}
 
     async def generate_ai(self, prompt: str, system_instruction: str = None, max_tokens: int = 1500) -> str:
-        """Bulletproof Multi-Cloud AI Router with automatic failover across NVIDIA NIM, Groq, Google Gemini, and Pollinations."""
+        """Bulletproof Multi-Cloud AI Router with automatic failover across OmniRoute, NVIDIA NIM, Groq, Gemini, and Pollinations."""
+        # Tier 0: OmniRoute AI Gateway (Local/Self-Hosted Proxy)
+        omniroute_url = os.getenv("OMNIROUTE_BASE_URL")
+        if omniroute_url:
+            try:
+                headers = {"Content-Type": "application/json"}
+                messages = []
+                if system_instruction:
+                    messages.append({"role": "system", "content": system_instruction})
+                messages.append({"role": "user", "content": prompt})
+                payload = {"model": "auto", "messages": messages, "max_tokens": max_tokens, "temperature": 0.6}
+                endpoint = f"{omniroute_url.rstrip('/')}/chat/completions"
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(endpoint, headers=headers, json=payload, timeout=8) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            content = data["choices"][0]["message"]["content"]
+                            if content and content.strip():
+                                return content.strip()
+            except Exception:
+                pass
+
         # Tier 1: NVIDIA NIM (Nemotron 120B / LLaMA 3.2 11B / Nemotron 340B)
         nv_key = os.getenv("NVIDIA_API_KEY")
         if nv_key:

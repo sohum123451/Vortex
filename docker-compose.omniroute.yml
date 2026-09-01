@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  omniroute:
+    image: node:20-alpine
+    container_name: omniroute-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - NODE_ENV=production
+    command: sh -c "npm install -g omniroute && omniroute start --port 8080"
+    volumes:
+      - omniroute-data:/root/.omniroute
+
+volumes:
+  omniroute-data:
