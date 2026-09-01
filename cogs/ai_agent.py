@@ -13,6 +13,7 @@ from google import genai
 from utils import DB_FILE, get_db, MAIN_COLOR, SUCCESS_COLOR, ERROR_COLOR, WARN_COLOR, INFO_COLOR
 
 import aiohttp
+import typing
 from groq import AsyncGroq
 
 class AIAgent(commands.Cog):
@@ -558,7 +559,7 @@ Generate the `run` async function:"""
             return await msg.edit(content=f"🛡️ **Vortex Anti-Nuke Shield Active:** Action blocked to protect the server:\n• {violation_str}")
 
         # Setup sandbox environment
-        env = {
+        env: dict[str, typing.Any] = {
             "ctx": ctx,
             "bot": self.bot,
             "db": get_db(),
@@ -584,7 +585,7 @@ Generate the `run` async function:"""
         stdout = io.StringIO()
         try:
             exec(cleaned_code, env)
-            run_func = env.get("run")
+            run_func: typing.Any = env.get("run")
             if not callable(run_func):
                 return await msg.edit(content="❌ Failed to synthesize executable `run` function.")
 
