@@ -1,11 +1,15 @@
 /* ==========================================================================
-   ⚙️ VORTEX BOT DASHBOARD INTERACTIVE SCRIPT
+   ⚡ VORTEX BOT DASHBOARD INTERACTIVE SCRIPT
+   High-Speed Data Binding, Live Music Controls, and Responsive Navigation
    ========================================================================== */
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Current Active Guild ID for music controls
-    let selectedGuildId = null;
-    let musicStateData = [];
+    // Extract Guild ID from URL query or body data attribute
+    const urlParams = new URLSearchParams(window.location.search);
+    const bodyGuildId = document.body ? document.body.dataset.guildId : null;
+    let selectedGuildId = urlParams.get("guild_id") || bodyGuildId || null;
+
+    let localIsPlaying = false;
 
     // ==========================================
     // 📱 MOBILE DRAWER CONTROLS
@@ -37,289 +41,172 @@ document.addEventListener("DOMContentLoaded", () => {
     const navLinks = document.querySelectorAll(".nav-link");
     const tabPanes = document.querySelectorAll(".tab-pane");
 
+    function switchTab(tabId) {
+        navLinks.forEach(item => {
+            if (item.getAttribute("data-tab") === tabId) {
+                item.classList.add("active");
+            } else {
+                item.classList.remove("active");
+            }
+        });
+
+        tabPanes.forEach(pane => {
+            if (pane.id === `tab-${tabId}`) {
+                pane.classList.add("active");
+            } else {
+                pane.classList.remove("active");
+            }
+        });
+
+        // Trigger data fetches on tab view
+        if (tabId === "leaderboards") fetchLeaderboards();
+        else if (tabId === "moderation") fetchModeration();
+        else if (tabId === "rpg") fetchRPG();
+        else if (tabId === "features") fetchFeatures();
+        else if (tabId === "music") fetchMusicState();
+    }
+
     navLinks.forEach(link => {
         link.addEventListener("click", (e) => {
             e.preventDefault();
             const tabId = link.getAttribute("data-tab");
-
-            // Update Active Sidebar link
-            navLinks.forEach(item => item.classList.remove("active"));
-            link.classList.add("active");
-
-            // Show matching Pane
-            tabPanes.forEach(pane => {
-                pane.classList.remove("active");
-                if (pane.id === `tab-${tabId}`) {
-                    pane.classList.add("active");
-                }
-            });
-
-            // Automatically close drawer on mobile after selection
-            if (window.innerWidth <= 992) {
-                closeMobileDrawer();
-            }
-
-            // Trigger fetch once when switching to specific panels
-            if (tabId === "leaderboards") {
-                fetchLeaderboards();
-            } else if (tabId === "moderation") {
-                fetchModeration();
-            } else if (tabId === "rpg") {
-                fetchRPG();
-            } else if (tabId === "features") {
-                fetchFeatures();
-            }
+            switchTab(tabId);
+            if (window.innerWidth <= 1024) closeMobileDrawer();
         });
     });
 
     // ==========================================
-    // 📊 SYSTEM OVERVIEW STATS (Polling 5s)
+    // 📊 SYSTEM OVERVIEW STATS (Polling 4s)
     // ==========================================
     async function fetchStats() {
         try {
             const res = await fetch("/api/stats");
             const data = await res.json();
 
-            if (data.ready) {
-                document.getElementById("stat-guilds").textContent = data.guilds;
-                document.getElementById("stat-users").textContent = data.users;
-                document.getElementById("stat-ping").textContent = `${data.ping}ms`;
-                document.getElementById("stat-uptime").textContent = data.uptime;
-                
-                // DB metrics
-                document.getElementById("db-level-users").textContent = data.db_records.levels_users;
-                document.getElementById("db-coins").textContent = data.db_records.coins.toLocaleString();
+            if (data && data.ready) {
+                const elGuilds = document.getElementById("stat-guilds");
+                const elUsers = document.getElementById("stat-users");
+                const elPing = document.getElementById("stat-ping");
+                const elUptime = document.getElementById("stat-uptime");
+                const elLevelUsers = document.getElementById("db-level-users");
+                const elCoins = document.getElementById("db-coins");
 
-                // Status Badge
-                const statusBadge = document.getElementById("bot-status-badge");
-                statusBadge.querySelector(".status-label").textContent = "Online";
-                statusBadge.querySelector(".pulse-dot").style.backgroundColor = "#1dd1a1";
-            } else {
-                // Loading/Connecting State
-                const statusBadge = document.getElementById("bot-status-badge");
-                statusBadge.querySelector(".status-label").textContent = "Connecting";
-                statusBadge.querySelector(".pulse-dot").style.backgroundColor = "#ff9f43";
+                if (elGuilds) elGuilds.textContent = data.guilds || 0;
+                if (elUsers) elUsers.textContent = (data.users || 0).toLocaleString();
+                if (elPing) elPing.textContent = `${data.ping || 0}ms`;
+                if (elUptime) elUptime.textContent = data.uptime || "0h 0m";
+
+                if (elLevelUsers && data.db_records) elLevelUsers.textContent = (data.db_records.levels_users || 0).toLocaleString();
+                if (elCoins && data.db_records) elCoins.textContent = (data.db_records.coins || 0).toLocaleString();
             }
         } catch (err) {
             console.error("Error fetching stats:", err);
-            const statusBadge = document.getElementById("bot-status-badge");
-            statusBadge.querySelector(".status-label").textContent = "Offline";
-            statusBadge.querySelector(".pulse-dot").style.backgroundColor = "#ff5252";
         }
     }
 
-    // Call stats initially and configure interval
     fetchStats();
     setInterval(fetchStats, 5000);
 
     // ==========================================
-    // 🏆 LEADERBOARD POPULATION
+    // 🎵 LIVE MUSIC PLAYER STATE
     // ==========================================
-    async function fetchLeaderboards() {
-        if (!selectedGuildId) return;
-        const levelsBody = document.getElementById("levels-leaderboard-body");
-        const economyBody = document.getElementById("economy-leaderboard-body");
-
-        try {
-            const res = await fetch(`/api/leaderboards?guild_id=${selectedGuildId}`);
-            const data = await res.json();
-
-            // Populate Levels
-            levelsBody.innerHTML = "";
-            if (data.levels && data.levels.length > 0) {
-                data.levels.forEach((row, idx) => {
-                    const tr = document.createElement("tr");
-                    tr.innerHTML = `
-                        <td class="rank-num">#${idx + 1}</td>
-                        <td>${row.username}</td>
-                        <td><span class="badge music-badge">Lvl ${row.level}</span></td>
-                        <td>${row.xp.toLocaleString()} XP</td>
-                    `;
-                    levelsBody.appendChild(tr);
-                });
-            } else {
-                levelsBody.innerHTML = `<tr><td colspan="4" class="loading">No leveling data recorded yet.</td></tr>`;
-            }
-
-            // Populate Economy
-            economyBody.innerHTML = "";
-            if (data.economy && data.economy.length > 0) {
-                data.economy.forEach((row, idx) => {
-                    const tr = document.createElement("tr");
-                    tr.innerHTML = `
-                        <td class="rank-num">#${idx + 1}</td>
-                        <td>${row.username}</td>
-                        <td>👛 $${row.balance.toLocaleString()}</td>
-                        <td>🏦 $${row.bank.toLocaleString()}</td>
-                        <td class="text-success">$${row.total.toLocaleString()}</td>
-                    `;
-                    economyBody.appendChild(tr);
-                });
-            } else {
-                economyBody.innerHTML = `<tr><td colspan="5" class="loading">No economy data recorded yet.</td></tr>`;
-            }
-
-        } catch (err) {
-            console.error("Error loading leaderboards:", err);
-            levelsBody.innerHTML = `<tr><td colspan="4" class="loading text-danger">Failed to retrieve stats.</td></tr>`;
-            economyBody.innerHTML = `<tr><td colspan="5" class="loading text-danger">Failed to retrieve stats.</td></tr>`;
-        }
-    }
-
-    // ==========================================
-    // 🎵 MUSIC CONSOLE CONTROLS (Polling 2s)
-    // ==========================================
-    const guildSelect = document.getElementById("music-guild-select");
     const playerActiveView = document.getElementById("player-active-view");
     const playerEmptyView = document.getElementById("player-empty-view");
-
     const trackTitle = document.getElementById("current-track-title");
     const trackArtist = document.getElementById("current-track-uploader");
-    const btnPauseResume = document.getElementById("btn-pause-resume");
+    const trackArtwork = document.querySelector(".album-disc-art");
+    const btnPlayPause = document.getElementById("btn-pause-resume");
     const btnSkip = document.getElementById("btn-skip");
     const volumeSlider = document.getElementById("player-volume");
-    const volumeDisplay = document.getElementById("volume-val-display");
+    const volumeValDisplay = document.getElementById("volume-val-display");
     const queueList = document.getElementById("music-queue-list");
-
-    let localIsPlaying = false;
 
     async function fetchMusicState() {
         if (!selectedGuildId) return;
+
         try {
-            const res = await fetch(`/api/music/state?guild_id=${selectedGuildId}`);
+            const res = await fetch("/api/music/states");
             const data = await res.json();
+            const guildMusic = Array.isArray(data) ? data.find(g => g.guild_id === selectedGuildId) : null;
 
-            if (data.error || !data.active) {
-                showEmptyPlayer();
-                return;
-            }
+            if (guildMusic && guildMusic.is_connected && guildMusic.now_playing) {
+                if (playerActiveView) playerActiveView.classList.remove("hidden");
+                if (playerEmptyView) playerEmptyView.style.display = "none";
+                if (trackArtwork) trackArtwork.classList.add("playing");
 
-            // Show player, hide empty
-            playerEmptyView.classList.add("hidden");
-            playerActiveView.classList.remove("hidden");
+                localIsPlaying = !guildMusic.is_paused;
+                if (trackTitle) trackTitle.textContent = guildMusic.now_playing.title || "Unknown Title";
+                if (trackArtist) trackArtist.textContent = guildMusic.now_playing.uploader || "Live Audio Stream";
 
-            // Set Title/Uploader
-            if (data.current) {
-                trackTitle.textContent = data.current.title;
-                trackArtist.textContent = data.current.uploader;
-                localIsPlaying = data.is_playing;
+                if (btnPlayPause) {
+                    btnPlayPause.innerHTML = localIsPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>';
+                }
+
+                if (volumeSlider) volumeSlider.value = guildMusic.volume || 70;
+                if (volumeValDisplay) volumeValDisplay.textContent = `${guildMusic.volume || 70}%`;
+
+                // Render Queue
+                if (queueList) {
+                    if (guildMusic.queue && guildMusic.queue.length > 0) {
+                        queueList.innerHTML = guildMusic.queue.map((item, idx) => `
+                            <li style="padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                                <span><strong>#${idx + 1}</strong> ${item.title}</span>
+                                <small style="color: var(--text-muted);">${item.duration || 'LIVE'}</small>
+                            </li>
+                        `).join("");
+                    } else {
+                        queueList.innerHTML = `<li style="text-align:center; color:var(--text-muted); padding: 20px;">Queue is empty</li>`;
+                    }
+                }
             } else {
-                trackTitle.textContent = "No Track Playing";
-                trackArtist.textContent = "Vortex Radio";
-                localIsPlaying = false;
-            }
-
-            // Toggle Play/Pause Button Icon
-            if (data.is_playing) {
-                btnPauseResume.innerHTML = `<i class="fa-solid fa-pause"></i>`;
-            } else {
-                btnPauseResume.innerHTML = `<i class="fa-solid fa-play"></i>`;
-            }
-
-            // Update Volume slider (only if user is not actively sliding it)
-            if (document.activeElement !== volumeSlider) {
-                volumeSlider.value = data.volume;
-                volumeDisplay.textContent = `${data.volume}%`;
-            }
-
-            // Update Queue
-            queueList.innerHTML = "";
-            if (data.queue && data.queue.length > 0) {
-                data.queue.forEach((song, idx) => {
-                    const li = document.createElement("li");
-                    const durationText = song.duration ? `${Math.floor(song.duration / 60)}:${(song.duration % 60).toString().padStart(2, '0')}` : "Stream";
-                    li.innerHTML = `
-                        <span class="song-title"><strong>${idx + 1}.</strong> ${song.title}</span>
-                        <span class="song-dur">${durationText}</span>
-                    `;
-                    queueList.appendChild(li);
-                });
-            } else {
-                queueList.innerHTML = `<li class="empty-queue">Queue is empty</li>`;
+                if (playerActiveView) playerActiveView.classList.add("hidden");
+                if (playerEmptyView) playerEmptyView.style.display = "block";
+                if (trackArtwork) trackArtwork.classList.remove("playing");
+                if (queueList) queueList.innerHTML = `<li style="text-align:center; color:var(--text-muted); padding: 24px;">No active queue. Play a song with <code>&play</code>!</li>`;
             }
         } catch (err) {
-            console.error("Error fetching music state:", err);
-            showEmptyPlayer();
+            console.error("Error loading music state:", err);
         }
     }
 
-    function showEmptyPlayer() {
-        playerActiveView.classList.add("hidden");
-        playerEmptyView.classList.remove("hidden");
-        queueList.innerHTML = `<li class="empty-queue">Queue is empty</li>`;
-    }
-
-    // Start polling music state
-    fetchMusicState();
-    setInterval(fetchMusicState, 2000);
-
-    // ==========================================
-    // ⚙️ CONTROLLER ACTIONS POST REQUESTS
-    // ==========================================
-    async function sendControlAction(action, extraData = {}) {
-        if (!selectedGuildId) return;
-
-        try {
-            const res = await fetch("/api/music/control", {
+    if (btnPlayPause) {
+        btnPlayPause.addEventListener("click", async () => {
+            const action = localIsPlaying ? "pause" : "resume";
+            await fetch("/api/music/control", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    guild_id: selectedGuildId,
-                    action: action,
-                    ...extraData
-                })
+                body: JSON.stringify({ guild_id: selectedGuildId, action: action })
             });
-            const data = await res.json();
-            if (data.error) {
-                console.error("Action error:", data.error);
-            } else {
-                fetchMusicState(); // refresh state immediately
-            }
-        } catch (err) {
-            console.error("Control API execution error:", err);
-        }
+            fetchMusicState();
+        });
     }
 
-    // Click Toggles
-    btnPauseResume.addEventListener("click", () => {
-        const action = localIsPlaying ? "pause" : "resume";
-        sendControlAction(action);
-    });
-
-    btnSkip.addEventListener("click", () => {
-        sendControlAction("skip");
-    });
-
-    // Volume input events
-    volumeSlider.addEventListener("input", () => {
-        volumeDisplay.textContent = `${volumeSlider.value}%`;
-    });
-
-    volumeSlider.addEventListener("change", () => {
-        sendControlAction("volume", { value: parseInt(volumeSlider.value) });
-    });
-
-    // ==========================================
-    // 📚 DOCS SEARCH / FILTER
-    // ==========================================
-    const searchInput = document.getElementById("docs-search-input");
-    const docsRows = document.querySelectorAll("#docs-table-body tr");
-
-    searchInput.addEventListener("input", () => {
-        const query = searchInput.value.toLowerCase().trim();
-
-        docsRows.forEach(row => {
-            const cells = row.getElementsByTagName("td");
-            const commandText = cells[1].textContent.toLowerCase();
-            const aliasesText = cells[2].textContent.toLowerCase();
-
-            if (commandText.includes(query) || aliasesText.includes(query)) {
-                row.style.display = "";
-            } else {
-                row.style.display = "none";
-            }
+    if (btnSkip) {
+        btnSkip.addEventListener("click", async () => {
+            await fetch("/api/music/control", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ guild_id: selectedGuildId, action: "skip" })
+            });
+            fetchMusicState();
         });
-    });
+    }
+
+    if (volumeSlider) {
+        volumeSlider.addEventListener("change", async () => {
+            const vol = parseInt(volumeSlider.value);
+            if (volumeValDisplay) volumeValDisplay.textContent = `${vol}%`;
+            await fetch("/api/music/control", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ guild_id: selectedGuildId, action: "volume", value: vol })
+            });
+        });
+    }
+
+    // Polling music
+    fetchMusicState();
+    setInterval(fetchMusicState, 3000);
 
     // ==========================================
     // 🛡️ MODERATION DATA
@@ -333,264 +220,215 @@ document.addEventListener("DOMContentLoaded", () => {
             const res = await fetch(`/api/moderation?guild_id=${selectedGuildId}`);
             const data = await res.json();
 
-            // Populate Warnings
-            warningsBody.innerHTML = "";
-            if (data.warnings && data.warnings.length > 0) {
-                data.warnings.forEach(row => {
-                    const tr = document.createElement("tr");
-                    tr.classList.add("warning-row");
-                    tr.setAttribute("data-user-id", row.user_id);
-                    tr.innerHTML = `
-                        <td><code>#${row.id}</code></td>
-                        <td><code>${row.user_id}</code></td>
-                        <td><strong>${row.username}</strong></td>
-                        <td>${row.reason}</td>
-                        <td class="text-muted"><small>${row.timestamp}</small></td>
-                    `;
-                    warningsBody.appendChild(tr);
-                });
-            } else {
-                warningsBody.innerHTML = `<tr><td colspan="5" class="loading">No warnings logged yet.</td></tr>`;
+            if (warningsBody) {
+                if (data.warnings && data.warnings.length > 0) {
+                    warningsBody.innerHTML = data.warnings.map(w => `
+                        <tr>
+                            <td><code>#${w.id}</code></td>
+                            <td><code>${w.user_id}</code></td>
+                            <td><strong>${w.username}</strong></td>
+                            <td>${w.reason || 'Misconduct'}</td>
+                            <td style="color:var(--text-muted); font-size:0.8rem;">${w.timestamp}</td>
+                        </tr>
+                    `).join("");
+                } else {
+                    warningsBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:32px; color:var(--text-muted);"><i class="fa-solid fa-shield-check" style="font-size:1.6rem; color:var(--accent-emerald); display:block; margin-bottom:8px;"></i>No warnings logged. Server is clean!</td></tr>`;
+                }
             }
 
-            // Populate Tempbans
-            tempbansBody.innerHTML = "";
-            if (data.tempbans && data.tempbans.length > 0) {
-                data.tempbans.forEach(row => {
-                    const tr = document.createElement("tr");
-                    tr.innerHTML = `
-                        <td><code>${row.user_id}</code></td>
-                        <td><strong>${row.username}</strong></td>
-                        <td><code>${row.guild_id}</code></td>
-                        <td class="text-danger">${row.unban_time}</td>
-                    `;
-                    tempbansBody.appendChild(tr);
-                });
-            } else {
-                tempbansBody.innerHTML = `<tr><td colspan="4" class="loading">No active temporary bans.</td></tr>`;
+            if (tempbansBody) {
+                if (data.tempbans && data.tempbans.length > 0) {
+                    tempbansBody.innerHTML = data.tempbans.map(tb => `
+                        <tr>
+                            <td><code>${tb.user_id}</code></td>
+                            <td><strong>${tb.username}</strong></td>
+                            <td style="color:var(--accent-rose); font-weight:600;">${tb.unban_time}</td>
+                        </tr>
+                    `).join("");
+                } else {
+                    tempbansBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:28px; color:var(--text-muted);">No active temporary bans.</td></tr>`;
+                }
             }
-
-            // Setup search filter for warnings
-            const warningSearch = document.getElementById("warning-search-input");
-            warningSearch.addEventListener("input", () => {
-                const query = warningSearch.value.toLowerCase().trim();
-                const warningRows = document.querySelectorAll(".warning-row");
-                warningRows.forEach(row => {
-                    const userId = row.getAttribute("data-user-id") || "";
-                    if (userId.includes(query)) {
-                        row.style.display = "";
-                    } else {
-                        row.style.display = "none";
-                    }
-                });
-            });
-
         } catch (err) {
             console.error("Error loading moderation logs:", err);
-            warningsBody.innerHTML = `<tr><td colspan="5" class="loading text-danger">Failed to fetch warning logs.</td></tr>`;
-            tempbansBody.innerHTML = `<tr><td colspan="4" class="loading text-danger">Failed to fetch tempbans.</td></tr>`;
+            if (warningsBody) warningsBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--accent-rose); padding:24px;">Failed to fetch warning logs.</td></tr>`;
         }
     }
 
     // ==========================================
-    // ⚔️ RPG ADVENTURERS
+    // ⚔️ RPG ADVENTURERS & CUSTOM TAGS
     // ==========================================
     async function fetchRPG() {
         if (!selectedGuildId) return;
         const rpgBody = document.getElementById("rpg-table-body");
+        const tagsBody = document.getElementById("tags-table-body");
+        const respondersBody = document.getElementById("responders-table-body");
 
         try {
             const res = await fetch(`/api/rpg/players?guild_id=${selectedGuildId}`);
             const data = await res.json();
 
-            rpgBody.innerHTML = "";
-            if (data.players && data.players.length > 0) {
-                data.players.forEach(row => {
-                    const tr = document.createElement("tr");
-                    tr.innerHTML = `
-                        <td><strong>${row.username}</strong><br><small class="text-muted"><code>${row.user_id}</code></small></td>
-                        <td><span class="badge music-badge">${row.class}</span></td>
-                        <td><strong>Lvl ${row.level}</strong></td>
-                        <td>${row.xp.toLocaleString()} XP</td>
-                        <td>❤️ ${row.hp}</td>
-                        <td>⚔️ ${row.attack} | 🛡️ ${row.defense}</td>
-                        <td class="text-success">$${row.coins.toLocaleString()}</td>
-                        <td>🗡️ ${row.weapon}<br>🛡️ ${row.armor}</td>
-                        <td>🏰 Floor ${row.floor}</td>
-                    `;
-                    rpgBody.appendChild(tr);
-                });
-            } else {
-                rpgBody.innerHTML = `<tr><td colspan="9" class="loading">No active RPG player logs found.</td></tr>`;
+            if (rpgBody) {
+                if (data.players && data.players.length > 0) {
+                    rpgBody.innerHTML = data.players.map(p => `
+                        <tr>
+                            <td><strong>${p.username}</strong><br><small style="color:var(--text-muted);"><code>${p.user_id}</code></small></td>
+                            <td><span class="badge music-badge">${p.class}</span></td>
+                            <td><strong>Lvl ${p.level}</strong></td>
+                            <td>${(p.xp || 0).toLocaleString()} XP</td>
+                            <td>❤️ ${p.hp}</td>
+                            <td>⚔️ ${p.attack} | 🛡️ ${p.defense}</td>
+                            <td style="color:var(--accent-emerald); font-weight:700;">$${(p.coins || 0).toLocaleString()}</td>
+                            <td>🗡️ ${p.weapon}<br>🛡️ ${p.armor}</td>
+                            <td>🏰 Floor ${p.floor}</td>
+                        </tr>
+                    `).join("");
+                } else {
+                    rpgBody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:32px; color:var(--text-muted);"><i class="fa-solid fa-dice-d20" style="font-size:1.8rem; color:var(--accent-gold); display:block; margin-bottom:8px;"></i>No active hero profiles in this server. Start an adventure with <code>&chooseclass</code>!</td></tr>`;
+                }
+            }
+
+            // Fetch custom tags & autoresponders
+            const fRes = await fetch(`/api/features/active?guild_id=${selectedGuildId}`);
+            const fData = await fRes.json();
+
+            if (tagsBody) {
+                if (fData.custom_tags && fData.custom_tags.length > 0) {
+                    tagsBody.innerHTML = fData.custom_tags.map(t => `
+                        <tr>
+                            <td><code>&${t.tag_name}</code></td>
+                            <td>${t.author}</td>
+                            <td>${(t.uses || 0).toLocaleString()}</td>
+                        </tr>
+                    `).join("");
+                } else {
+                    tagsBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:24px; color:var(--text-muted);">No custom tags yet. Create one with <code>&tag create &lt;name&gt; &lt;content&gt;</code>!</td></tr>`;
+                }
+            }
+
+            if (respondersBody) {
+                if (fData.autoresponders && fData.autoresponders.length > 0) {
+                    respondersBody.innerHTML = fData.autoresponders.map(ar => `
+                        <tr>
+                            <td><code>${ar.trigger}</code></td>
+                            <td><small>${ar.response}</small></td>
+                            <td><span class="badge">${ar.is_exact ? 'Exact' : 'Substring'}</span></td>
+                        </tr>
+                    `).join("");
+                } else {
+                    respondersBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:24px; color:var(--text-muted);">No autoresponders configured. Add one with <code>&autoresponder add</code>!</td></tr>`;
+                }
             }
         } catch (err) {
-            console.error("Error loading RPG players:", err);
-            rpgBody.innerHTML = `<tr><td colspan="9" class="loading text-danger">Failed to fetch RPG statistics.</td></tr>`;
+            console.error("Error loading RPG / Tags:", err);
         }
     }
 
     // ==========================================
-    // 🎉 ACTIVE FEATURES & GIVEAWAYS
+    // 🎁 GIVEAWAYS & PREFIX CONFIG
     // ==========================================
     async function fetchFeatures() {
         if (!selectedGuildId) return;
         const giveawaysBody = document.getElementById("giveaways-table-body");
-        const tagsBody = document.getElementById("tags-table-body");
-        const respondersBody = document.getElementById("responders-table-body");
 
         try {
             const res = await fetch(`/api/features/active?guild_id=${selectedGuildId}`);
             const data = await res.json();
 
-            // Populate Giveaways
-            giveawaysBody.innerHTML = "";
-            if (data.giveaways && data.giveaways.length > 0) {
-                data.giveaways.forEach(row => {
-                    const tr = document.createElement("tr");
-                    const dateFmt = new Date(row.end_time * 1000).toLocaleString();
-                    const statusText = row.is_active ? '<span class="badge music-badge">Active</span>' : '<span class="badge">Ended</span>';
-                    tr.innerHTML = `
-                        <td><strong>${row.prize}</strong></td>
-                        <td>🏆 ${row.winners} Winners</td>
-                        <td>${row.host}</td>
-                        <td><small>${dateFmt}</small></td>
-                        <td>${statusText}</td>
-                    `;
-                    giveawaysBody.appendChild(tr);
-                });
-            } else {
-                giveawaysBody.innerHTML = `<tr><td colspan="5" class="loading">No active giveaways scheduled.</td></tr>`;
+            if (giveawaysBody) {
+                if (data.giveaways && data.giveaways.length > 0) {
+                    giveawaysBody.innerHTML = data.giveaways.map(g => `
+                        <tr>
+                            <td><strong>${g.prize}</strong></td>
+                            <td>🏆 ${g.winners} Winners</td>
+                            <td>${g.host}</td>
+                            <td><small>${new Date(g.end_time * 1000).toLocaleString()}</small></td>
+                            <td><span class="badge music-badge">Active</span></td>
+                        </tr>
+                    `).join("");
+                } else {
+                    giveawaysBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:32px; color:var(--text-muted);"><i class="fa-solid fa-gift" style="font-size:1.8rem; color:var(--accent-purple); display:block; margin-bottom:8px;"></i>No active giveaways scheduled. Start one with <code>&gstart 10m 1 Nitro</code>!</td></tr>`;
+                }
             }
 
-            // Populate Custom Tags
-            tagsBody.innerHTML = "";
-            if (data.custom_tags && data.custom_tags.length > 0) {
-                data.custom_tags.forEach(row => {
-                    const tr = document.createElement("tr");
-                    tr.innerHTML = `
-                        <td><code>&${row.tag_name}</code></td>
-                        <td>${row.author}</td>
-                        <td>${row.uses.toLocaleString()}</td>
-                    `;
-                    tagsBody.appendChild(tr);
-                });
-            } else {
-                tagsBody.innerHTML = `<tr><td colspan="3" class="loading">No custom tags created yet.</td></tr>`;
-            }
-
-            // Populate Autoresponders
-            respondersBody.innerHTML = "";
-            if (data.autoresponders && data.autoresponders.length > 0) {
-                data.autoresponders.forEach(row => {
-                    const tr = document.createElement("tr");
-                    const matchType = row.is_exact ? "Exact Match" : "Substring Match";
-                    tr.innerHTML = `
-                        <td><code>${row.trigger}</code></td>
-                        <td><small>${row.response}</small></td>
-                        <td><span class="badge">${matchType}</span></td>
-                    `;
-                    respondersBody.appendChild(tr);
-                });
-            } else {
-                respondersBody.innerHTML = `<tr><td colspan="3" class="loading">No active autoresponders.</td></tr>`;
-            }
-
-            // Also load Leveling Config
             fetchLevelConfig();
-
+            fetchPrefixConfig();
         } catch (err) {
             console.error("Error loading features:", err);
-            giveawaysBody.innerHTML = `<tr><td colspan="5" class="loading text-danger">Failed to retrieve giveaways.</td></tr>`;
-            tagsBody.innerHTML = `<tr><td colspan="3" class="loading text-danger">Failed to fetch custom tags.</td></tr>`;
-            respondersBody.innerHTML = `<tr><td colspan="3" class="loading text-danger">Failed to fetch responders.</td></tr>`;
         }
     }
 
-    window.fetchLevelConfig = async function() {
-        const guildSelect = document.getElementById("music-guild-select");
-        const guildId = guildSelect ? guildSelect.value : null;
-        if (!guildId) return;
+    // ==========================================
+    // 🏆 LEADERBOARDS (XP & ECONOMY)
+    // ==========================================
+    async function fetchLeaderboards() {
+        if (!selectedGuildId) return;
+        const levelsBody = document.getElementById("levels-leaderboard-body");
+        const ecoBody = document.getElementById("eco-leaderboard-body");
 
         try {
-            const res = await fetch(`/api/level_config?guild_id=${guildId}`);
+            const res = await fetch(`/api/leaderboards?guild_id=${selectedGuildId}`);
             const data = await res.json();
-            if (data) {
-                document.getElementById("level-status-select").value = data.is_enabled ? "enabled" : "disabled";
-                document.getElementById("level-channel-select").value = data.channel_id || "current";
-                document.getElementById("level-template-input").value = data.custom_msg || "🎉 **Level Up!** Congratulations {user}, you reached **Level {level}**! ⭐";
+
+            if (levelsBody) {
+                if (data.levels && data.levels.length > 0) {
+                    levelsBody.innerHTML = data.levels.map((l, i) => `
+                        <tr>
+                            <td><strong>#${i + 1}</strong></td>
+                            <td>${l.username}</td>
+                            <td><span class="badge music-badge">Lvl ${l.level}</span></td>
+                            <td>${(l.xp || 0).toLocaleString()} XP</td>
+                        </tr>
+                    `).join("");
+                } else {
+                    levelsBody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:28px; color:var(--text-muted);">No leveled members yet. Chat to earn XP!</td></tr>`;
+                }
+            }
+
+            if (ecoBody) {
+                if (data.economy && data.economy.length > 0) {
+                    ecoBody.innerHTML = data.economy.map((e, i) => `
+                        <tr>
+                            <td><strong>#${i + 1}</strong></td>
+                            <td>${e.username}</td>
+                            <td style="color:var(--accent-emerald); font-weight:700;">$${(e.net_worth || 0).toLocaleString()}</td>
+                        </tr>
+                    `).join("");
+                } else {
+                    ecoBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:28px; color:var(--text-muted);">No economy records found. Claim daily coins with <code>&daily</code>!</td></tr>`;
+                }
             }
         } catch (err) {
-            console.error("Error loading level config:", err);
+            console.error("Error loading leaderboards:", err);
         }
-    };
+    }
 
-    window.saveLevelConfig = async function() {
-        const guildSelect = document.getElementById("music-guild-select");
-        const guildId = guildSelect ? guildSelect.value : null;
-        const statusSpan = document.getElementById("level-config-status");
-        if (!guildId) return;
-
-        const isEnabled = document.getElementById("level-status-select").value === "enabled";
-        const channelId = document.getElementById("level-channel-select").value;
-        const customMsg = document.getElementById("level-template-input").value;
-
-        statusSpan.style.color = "#a0a0a0";
-        statusSpan.textContent = "Saving...";
-
-        try {
-            const res = await fetch("/api/level_config", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    guild_id: guildId,
-                    is_enabled: isEnabled,
-                    channel_id: channelId,
-                    custom_msg: customMsg
-                })
-            });
-
-            const data = await res.json();
-            if (data.success) {
-                statusSpan.style.color = "#1dd1a1";
-                statusSpan.textContent = "✅ Leveling settings saved successfully!";
-                setTimeout(() => { statusSpan.textContent = ""; }, 4000);
-            } else {
-                statusSpan.style.color = "#ff6b6b";
-                statusSpan.textContent = "❌ Failed to save settings.";
-            }
-        } catch (err) {
-            statusSpan.style.color = "#ff6b6b";
-            statusSpan.textContent = "❌ Network error saving settings.";
-        }
-    };
-
+    // ==========================================
+    // ⚙️ PREFIX & LEVEL CONFIG SAVERS
+    // ==========================================
     window.fetchPrefixConfig = async function() {
-        const guildSelect = document.getElementById("music-guild-select");
-        const guildId = guildSelect ? guildSelect.value : null;
-        if (!guildId) return;
-
+        if (!selectedGuildId) return;
         try {
-            const res = await fetch(`/api/prefix?guild_id=${guildId}`);
+            const res = await fetch(`/api/prefix?guild_id=${selectedGuildId}`);
             const data = await res.json();
             if (data && data.prefix) {
                 const input = document.getElementById("server-prefix-input");
                 if (input) input.value = data.prefix;
             }
         } catch (err) {
-            console.error("Error loading prefix:", err);
+            console.error("Error fetching prefix:", err);
         }
     };
 
     window.savePrefixConfig = async function() {
-        const guildSelect = document.getElementById("music-guild-select");
-        const guildId = guildSelect ? guildSelect.value : null;
+        if (!selectedGuildId) return;
         const statusSpan = document.getElementById("prefix-config-status");
         const input = document.getElementById("server-prefix-input");
-        if (!guildId || !input) return;
+        if (!input) return;
 
         const newPrefix = input.value.trim() || "&";
         if (statusSpan) {
-            statusSpan.style.color = "#a0a0a0";
+            statusSpan.style.color = "#8E95A5";
             statusSpan.textContent = "Saving...";
         }
 
@@ -598,32 +436,84 @@ document.addEventListener("DOMContentLoaded", () => {
             const res = await fetch("/api/prefix", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    guild_id: guildId,
-                    prefix: newPrefix
-                })
+                body: JSON.stringify({ guild_id: selectedGuildId, prefix: newPrefix })
             });
-
             const data = await res.json();
             if (data.success && statusSpan) {
-                statusSpan.style.color = "#1dd1a1";
-                statusSpan.textContent = `✅ Server prefix set to "${data.prefix}"!`;
+                statusSpan.style.color = "#2ECC71";
+                statusSpan.textContent = `✅ Prefix set to "${data.prefix}"!`;
                 setTimeout(() => { statusSpan.textContent = ""; }, 4000);
             } else if (statusSpan) {
-                statusSpan.style.color = "#ff6b6b";
+                statusSpan.style.color = "#FF4757";
                 statusSpan.textContent = "❌ Failed to save prefix.";
             }
         } catch (err) {
             if (statusSpan) {
-                statusSpan.style.color = "#ff6b6b";
+                statusSpan.style.color = "#FF4757";
                 statusSpan.textContent = "❌ Network error.";
             }
         }
     };
 
-    // Auto-fetch prefix on initial load
-    setTimeout(() => {
-        if (window.fetchPrefixConfig) window.fetchPrefixConfig();
-    }, 1000);
-});
+    window.fetchLevelConfig = async function() {
+        if (!selectedGuildId) return;
+        try {
+            const res = await fetch(`/api/level_config?guild_id=${selectedGuildId}`);
+            const data = await res.json();
+            if (data) {
+                const elStatus = document.getElementById("level-status-select");
+                const elChan = document.getElementById("level-channel-select");
+                const elTpl = document.getElementById("level-template-input");
+                if (elStatus) elStatus.value = data.is_enabled ? "enabled" : "disabled";
+                if (elChan) elChan.value = data.channel_id || "current";
+                if (elTpl) elTpl.value = data.custom_msg || "🎉 **Level Up!** Congratulations {user}, you reached **Level {level}**! ⭐";
+            }
+        } catch (err) {
+            console.error("Error loading level config:", err);
+        }
+    };
 
+    window.saveLevelConfig = async function() {
+        if (!selectedGuildId) return;
+        const statusSpan = document.getElementById("level-config-status");
+        const isEnabled = document.getElementById("level-status-select").value === "enabled";
+        const channelId = document.getElementById("level-channel-select").value;
+        const customMsg = document.getElementById("level-template-input").value;
+
+        if (statusSpan) {
+            statusSpan.style.color = "#8E95A5";
+            statusSpan.textContent = "Saving...";
+        }
+
+        try {
+            const res = await fetch("/api/level_config", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    guild_id: selectedGuildId,
+                    is_enabled: isEnabled,
+                    channel_id: channelId,
+                    custom_msg: customMsg
+                })
+            });
+            const data = await res.json();
+            if (data.success && statusSpan) {
+                statusSpan.style.color = "#2ECC71";
+                statusSpan.textContent = "✅ Leveling settings saved successfully!";
+                setTimeout(() => { statusSpan.textContent = ""; }, 4000);
+            } else if (statusSpan) {
+                statusSpan.style.color = "#FF4757";
+                statusSpan.textContent = "❌ Failed to save.";
+            }
+        } catch (err) {
+            if (statusSpan) {
+                statusSpan.style.color = "#FF4757";
+                statusSpan.textContent = "❌ Network error.";
+            }
+        }
+    };
+
+    // Auto-fetch active guild data on load
+    fetchPrefixConfig();
+    fetchLevelConfig();
+});
