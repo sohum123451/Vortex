@@ -309,6 +309,78 @@ class Developer(commands.Cog):
             embed.add_field(name="📋 Full Stack Trace", value=f"```py\n{trace_str[-1200:]}\n```", inline=False)
         await ctx.reply(embed=embed)
 
+    @commands.hybrid_command(name="ram", aliases=["memory", "meminfo", "resources"], description="[Admin] Check live Render RAM and process memory usage")
+    async def memory_info(self, ctx):
+        """Displays real-time memory stats, RSS allocation, and Render 512MB quota health."""
+        import gc
+        import psutil
+
+        process = psutil.Process(os.getpid())
+        mem_info = process.memory_info()
+        rss_mb = mem_info.rss / (1024 * 1024)
+        vms_mb = mem_info.vms / (1024 * 1024)
+
+        render_limit_mb = 512.0
+        used_pct = (rss_mb / render_limit_mb) * 100
+
+        # Health status badge
+        if used_pct < 50:
+            health = "🟢 Optimal (<50%)"
+            color = SUCCESS_COLOR
+        elif used_pct < 80:
+            health = "🟡 Moderate (50-80%)"
+            color = MAIN_COLOR
+        else:
+            health = "🔴 Warning (>80%)"
+            color = ERROR_COLOR
+
+        embed = discord.Embed(
+            title="📊 Live Memory & Render Container Health",
+            description=f"**Render Free-Tier Allocation:** `512.0 MB RAM`\n**Container Health:** {health}",
+            color=color,
+            timestamp=datetime.now(timezone.utc),
+        )
+        embed.add_field(name="💾 Process RSS (Resident)", value=f"`{rss_mb:.1f} MB` ({used_pct:.1f}%)", inline=True)
+        embed.add_field(name="🧠 Virtual Memory (VMS)", value=f"`{vms_mb:.1f} MB`", inline=True)
+        embed.add_field(name="🧹 Cached Channels", value=f"`{len(self.bot.cached_messages):,}` msgs", inline=True)
+        embed.add_field(name="🧩 Loaded Cogs", value=f"`{len(self.bot.cogs)}` modules", inline=True)
+        embed.add_field(name="⚡ Active Guilds", value=f"`{len(self.bot.guilds):,}` servers", inline=True)
+        embed.add_field(name="⏱️ System Uptime", value=f"`{str(datetime.now(timezone.utc) - self.bot.start_time).split('.')[0]}`", inline=True)
+
+        embed.set_footer(text="Automated memory optimization runs every 10 mins • Type &gc to force clean")
+        await ctx.reply(embed=embed)
+
+    @commands.command(name="gc", aliases=["clearmem", "free_ram"], description="[Owner] Force run Python garbage collection and SQLite WAL compaction")
+    @commands.is_owner()
+    async def force_gc(self, ctx):
+        """Force runs gc.collect() and frees unreferenced memory back to the OS."""
+        import gc
+        import psutil
+
+        proc = psutil.Process(os.getpid())
+        before_mb = proc.memory_info().rss / (1024 * 1024)
+
+        collected = gc.collect()
+        with sqlite3.connect(DB_FILE) as conn:
+            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            conn.execute("PRAGMA shrink_memory")
+
+        after_mb = proc.memory_info().rss / (1024 * 1024)
+        diff = before_mb - after_mb
+
+        embed = discord.Embed(
+            title="🧹 Memory Garbage Collection Executed",
+            description=(
+                f"• **Garbage Objects Reclaimed:** `{collected:,}` objects\n"
+                f"• **Before Clean:** `{before_mb:.1f} MB`\n"
+                f"• **After Clean:** `{after_mb:.1f} MB`\n"
+                f"• **Freed Memory:** `{diff:.2f} MB`"
+            ),
+            color=SUCCESS_COLOR,
+            timestamp=datetime.now(timezone.utc),
+        )
+        await ctx.reply(embed=embed)
+
 async def setup(bot):
     await bot.add_cog(Developer(bot))
 

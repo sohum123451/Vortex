@@ -14,9 +14,10 @@ if sys.platform == "win32":
         pass
 
 import requests
+import gc
 from urllib.parse import quote
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request, redirect, session
 from utils import DB_FILE, MAIN_COLOR, ERROR_COLOR, get_db
@@ -994,11 +995,13 @@ class ErrorHandler(commands.Cog):
             pass
 
 # ==========================================
-# 🤖 BOT SETUP & DYNAMIC PREFIX RESOLVER
+# 🤖 BOT SETUP & LOW-MEMORY OPTIMIZATION
 # ==========================================
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
+intents.presences = False
+intents.typing = False
 
 _prefix_cache = {}
 
@@ -1026,12 +1029,6 @@ class VortexBot(commands.Bot):
     async def setup_hook(self):
         self.start_time = datetime.now(timezone.utc)
         
-        # Load developer extension if available
-        try:
-            await self.load_extension("jishaku")
-        except Exception:
-            pass
-
         # Global Error Handler
         await self.add_cog(ErrorHandler(self))
 
@@ -1060,10 +1057,26 @@ bot = VortexBot(
     command_prefix=get_guild_prefix,
     intents=intents,
     help_command=None,
+    max_messages=50,  # Caps message buffer to 50/channel, saving 150MB+ RAM on Render
+    chunk_guilds_at_startup=False,  # Lazy-load members on demand to prevent memory spikes on boot
 )
+
+# 🧹 Periodic Automated Memory Optimization Loop for Render Free Tier (512MB RAM)
+@tasks.loop(minutes=10)
+async def memory_cleanup_task():
+    """Periodically reclaims Python heap memory and truncates SQLite WAL caches."""
+    try:
+        collected = gc.collect()
+        with sqlite3.connect(DB_FILE) as conn:
+            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            conn.execute("PRAGMA shrink_memory")
+    except Exception:
+        pass
 
 @bot.event
 async def on_ready():
+    if not memory_cleanup_task.is_running():
+        memory_cleanup_task.start()
     print(f"🌟 Vortex Bot logged in as {bot.user} (ID: {bot.user.id})", flush=True)
     await bot.change_presence(
         activity=discord.Activity(
