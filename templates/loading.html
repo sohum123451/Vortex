@@ -12,34 +12,34 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Stylesheet -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=4.0">
     <style>
         body {
             display: flex;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            background-color: #0d0f14;
+            background-color: #090A0E;
             margin: 0;
             padding: 24px;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            color: #f8fafc;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: #E2E8F0;
             text-align: center;
         }
         .loading-card {
-            background: #141720;
-            border: 1px solid #202532;
-            border-radius: 20px;
-            padding: 44px 28px;
-            max-width: 440px;
+            background: #13161F;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 12px;
+            padding: 40px 28px;
+            max-width: 420px;
             width: 100%;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
         }
         .spinner {
-            font-size: 2.8rem;
-            color: #5865f2;
-            margin-bottom: 20px;
-            animation: spin 1.2s linear infinite;
+            font-size: 2.2rem;
+            color: #5865F2;
+            margin-bottom: 18px;
+            animation: spin 0.8s linear infinite;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -47,14 +47,14 @@
         }
         h2 {
             font-family: 'Outfit', sans-serif;
-            font-size: 1.6rem;
+            font-size: 1.4rem;
             font-weight: 700;
             margin-bottom: 8px;
-            color: #fff;
+            color: #FFFFFF;
         }
         p {
-            color: #94a3b8;
-            font-size: 0.92rem;
+            color: #94A3B8;
+            font-size: 0.9rem;
             line-height: 1.5;
         }
     </style>

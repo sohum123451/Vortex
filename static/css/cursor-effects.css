@@ -1,62 +1,61 @@
 /* ==========================================================================
-   ⚡ VORTEX INTERACTIVE CURSOR TRACKING & EMIL KOWALSKI MOTION SYSTEM
-   Physics-based cursor follower, dynamic card spotlighting & magnetic states
+   ⚡ VORTEX — STUDIO REFINED MOTION & AMBIENT SPOTLIGHT SYSTEM
+   Minimalist, non-intrusive cursor and micro-lighting (Linear/Apple standard)
    ========================================================================== */
 
-/* Cursor Elements (Hidden on touch devices) */
+/* Clean Micro Cursor Elements (Hidden on touch devices) */
 .cursor-dot {
     position: fixed;
     top: 0;
     left: 0;
-    width: 8px;
-    height: 8px;
-    background: #00D2FF;
+    width: 6px;
+    height: 6px;
+    background: #FFFFFF;
     border-radius: 50%;
     pointer-events: none;
     z-index: 99999;
     transform: translate(-50%, -50%);
-    box-shadow: 0 0 10px #00D2FF, 0 0 20px rgba(0, 210, 255, 0.6);
-    transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
-                height 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-                background 0.2s ease,
-                opacity 0.3s ease;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+    transition: width 140ms cubic-bezier(0.23, 1, 0.32, 1), 
+                height 140ms cubic-bezier(0.23, 1, 0.32, 1),
+                background-color 140ms ease,
+                opacity 200ms ease;
 }
 
 .cursor-follower {
     position: fixed;
     top: 0;
     left: 0;
-    width: 36px;
-    height: 36px;
-    border: 1.5px solid rgba(88, 101, 242, 0.5);
-    background: radial-gradient(circle, rgba(88, 101, 242, 0.15) 0%, transparent 70%);
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.02);
     border-radius: 50%;
     pointer-events: none;
     z-index: 99998;
     transform: translate(-50%, -50%);
-    backdrop-filter: blur(1px);
-    -webkit-backdrop-filter: blur(1px);
-    transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
-                height 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
-                border-color 0.3s ease,
-                background 0.3s ease,
-                transform 0.15s ease-out,
-                opacity 0.3s ease;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    transition: width 180ms cubic-bezier(0.23, 1, 0.32, 1), 
+                height 180ms cubic-bezier(0.23, 1, 0.32, 1), 
+                border-color 180ms ease,
+                background-color 180ms ease,
+                opacity 200ms ease;
 }
 
 /* Hover States for Cursor Follower */
 body.cursor-hover .cursor-dot {
-    width: 12px;
-    height: 12px;
+    width: 8px;
+    height: 8px;
     background: #5865F2;
-    box-shadow: 0 0 16px #5865F2, 0 0 30px rgba(88, 101, 242, 0.8);
+    box-shadow: 0 0 10px rgba(88, 101, 242, 0.6);
 }
 
 body.cursor-hover .cursor-follower {
-    width: 60px;
-    height: 60px;
-    border-color: rgba(0, 210, 255, 0.8);
-    background: radial-gradient(circle, rgba(0, 210, 255, 0.2) 0%, rgba(88, 101, 242, 0.1) 70%);
+    width: 44px;
+    height: 44px;
+    border-color: rgba(88, 101, 242, 0.4);
+    background: rgba(88, 101, 242, 0.05);
 }
 
 body.cursor-click .cursor-dot {
@@ -67,7 +66,7 @@ body.cursor-click .cursor-follower {
     transform: translate(-50%, -50%) scale(0.85);
 }
 
-/* Dynamic Cursor Background Spotlight */
+/* Subdued Background Spotlight */
 .cursor-ambient-spotlight {
     position: fixed;
     top: 0;
@@ -77,16 +76,15 @@ body.cursor-click .cursor-follower {
     pointer-events: none;
     z-index: 1;
     background: radial-gradient(
-        700px circle at var(--cursor-x, 50vw) var(--cursor-y, 50vh),
-        rgba(88, 101, 242, 0.08) 0%,
-        rgba(0, 210, 255, 0.03) 30%,
-        transparent 75%
+        600px circle at var(--cursor-x, 50vw) var(--cursor-y, 50vh),
+        rgba(88, 101, 242, 0.035) 0%,
+        transparent 70%
     );
     transition: opacity 0.4s ease;
 }
 
 /* ==========================================================================
-   ✨ CARD SPOTLIGHT SHINE (Refraction under glass on cursor move)
+   ✨ CARD SPOTLIGHT SHINE (Linear micro-reflection on cursor proximity)
    ========================================================================== */
 
 .spotlight-card,
@@ -114,13 +112,12 @@ body.cursor-click .cursor-follower {
     right: 0;
     bottom: 0;
     background: radial-gradient(
-        400px circle at var(--mouse-x, -500px) var(--mouse-y, -500px),
-        rgba(255, 255, 255, 0.07) 0%,
-        rgba(88, 101, 242, 0.08) 30%,
-        transparent 80%
+        350px circle at var(--mouse-x, -500px) var(--mouse-y, -500px),
+        rgba(255, 255, 255, 0.04) 0%,
+        transparent 70%
     );
     opacity: 0;
-    transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity 0.25s cubic-bezier(0.23, 1, 0.32, 1);
     pointer-events: none;
     z-index: 1;
     border-radius: inherit;
@@ -142,10 +139,10 @@ body.cursor-click .cursor-follower {
 .hero-btn-primary,
 .hero-btn-secondary,
 .filter-btn {
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-                box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-                background 0.2s ease,
-                border-color 0.2s ease;
+    transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+                box-shadow 160ms cubic-bezier(0.23, 1, 0.32, 1),
+                background-color 140ms ease,
+                border-color 140ms ease;
     will-change: transform;
 }
 
@@ -155,7 +152,7 @@ body.cursor-click .cursor-follower {
 .hero-btn-primary:active,
 .hero-btn-secondary:active,
 .filter-btn:active {
-    transform: scale(0.96) !important;
+    transform: scale(0.97) !important;
 }
 
 /* Hide custom cursor on mobile touch screens */
