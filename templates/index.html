@@ -32,6 +32,12 @@
             --font-heading: 'Outfit', sans-serif;
             --font-body: 'Plus Jakarta Sans', sans-serif;
             --font-mono: 'JetBrains Mono', monospace;
+
+            /* ⚡ Design Engineering Motion Tokens (Emil Kowalski & Apple Standards) */
+            --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+            --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+            --duration-fast: 140ms;
+            --duration-normal: 200ms;
         }
 
         * {
@@ -47,6 +53,8 @@
             line-height: 1.6;
             overflow-x: hidden;
             position: relative;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
         }
 
         /* Ambient Glow Backdrop */
@@ -70,7 +78,7 @@
             z-index: 100;
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            background: rgba(11, 12, 14, 0.8);
+            background: rgba(11, 12, 14, 0.85);
             border-bottom: 1px solid var(--border-glass);
             padding: 16px 24px;
         }
@@ -93,6 +101,7 @@
             font-weight: 800;
             font-size: 1.4rem;
             letter-spacing: -0.5px;
+            transition: transform var(--duration-fast) var(--ease-out);
         }
 
         .brand-icon {
@@ -119,7 +128,7 @@
             text-decoration: none;
             font-weight: 600;
             font-size: 0.95rem;
-            transition: color 0.2s ease;
+            transition: color var(--duration-fast) var(--ease-out);
         }
 
         .nav-link:hover {
@@ -137,13 +146,50 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            transition: all 0.2s ease;
             box-shadow: 0 4px 12px var(--primary-glow);
+            transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
         }
 
-        .nav-btn:hover {
-            background: #4752c4;
-            transform: translateY(-1px);
+        /* 🔘 Global Tactile Active States (Emil Kowalski / Apple WWDC) */
+        button:active,
+        .btn-primary:active,
+        .btn-secondary:active,
+        .nav-btn:active,
+        .filter-btn:active,
+        .brand-logo:active {
+            transform: scale(0.97) !important;
+            transition: transform 80ms ease-out !important;
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            .nav-btn:hover {
+                background: #4752c4;
+                transform: translateY(-1px);
+                box-shadow: 0 6px 18px rgba(88, 101, 242, 0.5);
+            }
+
+            .btn-primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 12px 30px rgba(88, 101, 242, 0.6);
+            }
+
+            .btn-secondary:hover {
+                background: rgba(255, 255, 255, 0.1);
+                border-color: rgba(255, 255, 255, 0.2);
+                transform: translateY(-2px);
+            }
+
+            .feature-box:hover {
+                background: var(--bg-card-hover);
+                border-color: var(--border-glow);
+                transform: translateY(-3px);
+                box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+            }
+
+            .metric-card:hover {
+                border-color: rgba(88, 101, 242, 0.3);
+                transform: translateY(-2px);
+            }
         }
 
         /* Hero Section */
@@ -224,13 +270,8 @@
             display: inline-flex;
             align-items: center;
             gap: 10px;
-            transition: all 0.25s ease;
             box-shadow: 0 8px 24px var(--primary-glow);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 30px rgba(88, 101, 242, 0.6);
+            transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out), filter var(--duration-fast) var(--ease-out);
         }
 
         .btn-secondary {
@@ -246,13 +287,7 @@
             align-items: center;
             gap: 10px;
             backdrop-filter: blur(10px);
-            transition: all 0.25s ease;
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
+            transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
         }
 
         /* Metrics Strip */
@@ -272,6 +307,7 @@
             border-radius: 12px;
             text-align: center;
             backdrop-filter: blur(12px);
+            transition: transform var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
         }
 
         .metric-value {
@@ -342,16 +378,9 @@
             border: 1px solid var(--border-glass);
             border-radius: 14px;
             padding: 28px;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
             overflow: hidden;
-        }
-
-        .feature-box:hover {
-            background: var(--bg-card-hover);
-            border-color: var(--border-glow);
-            transform: translateY(-4px);
-            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+            transition: transform var(--duration-normal) var(--ease-out), background-color var(--duration-normal) var(--ease-out), border-color var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
         }
 
         .feature-icon-wrap {
@@ -421,7 +450,7 @@
             color: #fff;
             font-size: 1rem;
             font-family: var(--font-body);
-            transition: border-color 0.2s ease;
+            transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
         }
 
         .search-input:focus {
@@ -455,7 +484,7 @@
             font-size: 0.88rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
         }
 
         .filter-btn.active, .filter-btn:hover {
@@ -537,7 +566,7 @@
         .footer-link {
             color: var(--text-muted);
             text-decoration: none;
-            transition: color 0.2s ease;
+            transition: color var(--duration-fast) var(--ease-out);
         }
 
         .footer-link:hover {
@@ -548,6 +577,17 @@
             .hero-title { font-size: 2.6rem; }
             .features-grid { grid-template-columns: 1fr; }
             .metrics-strip { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* ♿ Accessibility: Reduced Motion Support */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+            .status-dot { animation: none !important; }
         }
     </style>
 </head>

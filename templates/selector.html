@@ -18,6 +18,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/cursor-effects.css') }}?v=1.0">
     
     <style>
+        :root {
+            --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+            --duration-fast: 140ms;
+            --duration-normal: 200ms;
+        }
+
         body {
             min-height: 100vh;
             background-color: var(--bg-base);
@@ -29,6 +35,8 @@
             flex-direction: column;
             align-items: center;
             position: relative;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
         }
 
         .ambient-selector-glow {
@@ -105,12 +113,41 @@
             border-radius: var(--radius-sm);
             background: rgba(255, 71, 87, 0.1);
             border: 1px solid rgba(255, 71, 87, 0.2);
-            transition: all 0.2s ease;
+            transition: background-color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
         }
 
-        .logout-link:hover {
-            background: rgba(255, 71, 87, 0.2);
-            transform: translateY(-1px);
+        /* 🔘 Tactile Active Press States */
+        button:active,
+        .btn-manage-server:active,
+        .btn-invite-server:active,
+        .logout-link:active {
+            transform: scale(0.97) !important;
+            transition: transform 80ms ease-out !important;
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            .logout-link:hover {
+                background: rgba(255, 71, 87, 0.2);
+                transform: translateY(-1px);
+            }
+
+            .guild-card:hover {
+                background: var(--bg-card-hover);
+                border-color: var(--border-glow-primary);
+                transform: translateY(-4px);
+                box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+            }
+
+            .btn-manage-server:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 6px 18px rgba(88, 101, 242, 0.5);
+            }
+
+            .btn-invite-server:hover {
+                color: #fff;
+                background: rgba(255, 255, 255, 0.12);
+                border-color: rgba(255, 255, 255, 0.2);
+            }
         }
 
         .selector-header {
@@ -155,16 +192,9 @@
             align-items: center;
             text-align: center;
             backdrop-filter: blur(14px);
-            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: transform var(--duration-normal) var(--ease-out), background-color var(--duration-normal) var(--ease-out), border-color var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
             position: relative;
             overflow: hidden;
-        }
-
-        .guild-card:hover {
-            background: var(--bg-card-hover);
-            border-color: var(--border-glow-primary);
-            transform: translateY(-4px);
-            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
         }
 
         .guild-icon-large, .guild-fallback-large {
@@ -214,12 +244,7 @@
             justify-content: center;
             gap: 8px;
             box-shadow: 0 4px 12px var(--primary-glow);
-            transition: all 0.2s ease;
-        }
-
-        .btn-manage-server:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 18px rgba(88, 101, 242, 0.5);
+            transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
         }
 
         .btn-invite-server {
@@ -236,13 +261,17 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            transition: all 0.2s ease;
+            transition: color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
         }
 
-        .btn-invite-server:hover {
-            color: #fff;
-            background: rgba(255, 255, 255, 0.12);
-            border-color: rgba(255, 255, 255, 0.2);
+        /* ♿ Accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
         }
     </style>
 </head>

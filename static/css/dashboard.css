@@ -43,6 +43,14 @@
     --radius-md: 12px;
     --radius-lg: 18px;
     --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+    /* ⚡ Design Engineering Motion Tokens (Emil Kowalski & Apple standards) */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --duration-fast: 140ms;
+    --duration-normal: 200ms;
+    --duration-smooth: 280ms;
 }
 
 *, *::before, *::after {
@@ -65,11 +73,13 @@ html, body {
     line-height: 1.6;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
 a {
     color: inherit;
     text-decoration: none;
+    transition: color var(--duration-fast) var(--ease-out);
 }
 
 button, input, select, textarea {
@@ -89,7 +99,7 @@ select, input[type="text"], input[type="password"], input[type="number"], textar
     padding: 10px 14px !important;
     font-size: 0.92rem !important;
     font-family: var(--font-body) !important;
-    transition: all 0.2s ease !important;
+    transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out) !important;
 }
 
 select:focus, input:focus, textarea:focus {
@@ -107,6 +117,21 @@ select option {
 
 button {
     cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* 🔘 Global Tactile Feedback (Apple WWDC & Emil Kowalski Standard) */
+button:active,
+.btn-primary:active,
+.btn-secondary:active,
+.nav-link:active,
+.ctrl-btn:active,
+.back-selector-btn:active,
+.save-settings-btn:active,
+.sidebar-collapse-toggle:active {
+    transform: scale(0.97) !important;
+    transition: transform 80ms ease-out !important;
 }
 
 /* ==========================================================================
@@ -930,4 +955,28 @@ table tr:hover td {
 
 @media (max-width: 600px) {
     .stats-grid { grid-template-columns: 1fr; }
+}
+
+/* ==========================================================================
+   ♿ ACCESSIBILITY: REDUCED MOTION SUPPORT (WCAG / Emil Kowalski Standard)
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .tab-pane {
+        animation: none !important;
+    }
+
+    .album-disc-art.playing {
+        animation: none !important;
+    }
+
+    .eq-bar {
+        animation: none !important;
+    }
 }
