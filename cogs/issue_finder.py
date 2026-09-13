@@ -4,30 +4,49 @@ Commands:
   !dashboard               - Get live link & passcode to the Web Command Dashboard
   !findissues [lang] [days] - Search for candidate open-source issues
   !queue                    - View top candidate issues in Turso DB
-  !autofix <issue_id>       - Autonomously solve, test, and open PR for issue
 """
-
-from __future__ import annotations
 
 import json
 import os
-import subprocess
-import sys
-from pathlib import Path
-
+import urllib.request
 import discord
 from discord.ext import commands
+from pathlib import Path
 
-ISSUE_FINDER_PATH = Path("C:/Users/manga/projects/issue-finder")
-if str(ISSUE_FINDER_PATH) not in sys.path:
-    sys.path.insert(0, str(ISSUE_FINDER_PATH))
-
-try:
-    from issue_finder import config, db, filters, github, pipeline
-except ImportError:
-    import config, db, filters, github, pipeline
-
+TURSO_URL = os.environ.get("TURSO_DATABASE_URL", "https://vortex-db-sohum123451.aws-ap-south-1.turso.io")
+TURSO_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3ODgxODY1MTQsImlkIjoiMDFhMDU4MzYtYzUwMS03NDk3LWE3YzAtYTc2Y2Y4MDRhNzUwIiwia2lkIjoieEJQLWZSdmFEYmtCaVdFNkt5WWtXdnY4WVF2SU5vZ3hvVng4SHVfM2VvYyIsInJpZCI6ImE0YTkwYmI1LTczNTYtNDMyOS04YjQyLTQ4MDEyOTUwMTMwZiJ9.8bUEXloF14KPlc_M_UjybZwvRTSIJCMuk2PldAt7dZToZjwxV5lE7bYEXlqDkLhQHepRJwoWf-nx5I_8smdcCA")
 ALLOWED_USERS = [1464522902379561100]
+
+
+def turso_query(sql: str) -> list:
+    """Execute query against Turso Cloud DB via HTTP pipeline."""
+    try:
+        pipeline_url = TURSO_URL.rstrip("/") + "/v2/pipeline"
+        if not pipeline_url.startswith("http"):
+            pipeline_url = "https://" + pipeline_url.lstrip(":/")
+        
+        headers = {
+            "Authorization": f"Bearer {TURSO_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        payload = json.dumps({"requests": [{"type": "execute", "stmt": {"sql": sql}}]}).encode("utf-8")
+        req = urllib.request.Request(pipeline_url, data=payload, headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            results = data.get("results", [])
+            if results and results[0].get("type") == "ok":
+                res_data = results[0].get("response", {}).get("result", {})
+                cols = [c["name"] for c in res_data.get("cols", [])]
+                rows = []
+                for row in res_data.get("rows", []):
+                    row_dict = {}
+                    for col_name, val_obj in zip(cols, row):
+                        row_dict[col_name] = val_obj.get("value")
+                    rows.append(row_dict)
+                return rows
+    except Exception as e:
+        print(f"[Turso Error] {e}")
+    return []
 
 
 class IssueFinder(commands.Cog):
@@ -35,7 +54,6 @@ class IssueFinder(commands.Cog):
         self.bot = bot
 
     def is_authorized(self, ctx: commands.Context) -> bool:
-        """Owner and admin security check."""
         if ctx.author.id in ALLOWED_USERS or ctx.author.id == getattr(self.bot, "owner_id", None):
             return True
         if hasattr(ctx.author, "guild_permissions") and ctx.author.guild_permissions.administrator:
@@ -44,7 +62,7 @@ class IssueFinder(commands.Cog):
 
     @commands.command(name="dashboard", aliases=["web", "site", "dash"])
     async def dashboard(self, ctx: commands.Context):
-        """Get live link to the Web Command Dashboard."""
+        """Get live link & passcode to the Web Command Dashboard."""
         if not self.is_authorized(ctx):
             await ctx.send("❌ Permission denied. Only authorized bot operators can access dashboard links.")
             return
@@ -59,20 +77,17 @@ class IssueFinder(commands.Cog):
             value="[https://fine-geese-judge.loca.lt](https://fine-geese-judge.loca.lt)",
             inline=False
         )
-        embed.add_field(
-            name="🔑 Passcode",
-            value="`sohum2026`",
-            inline=True
-        )
+        embed.add_field(name="🔑 Passcode", value="`sohum2026`", inline=True)
+        embed.add_field(name="Verification IP", value="`182.66.218.121`", inline=True)
         embed.add_field(
             name="🛡️ Security",
-            value="Passcode-protected | Zero token leakage | Turso Cloud Sync",
+            value="Passcode-protected | Turso Cloud Sync | Zero Token Leakage",
             inline=False
         )
         await ctx.send(embed=embed)
 
     @commands.command(name="findissues", aliases=["searchissues", "issues"])
-    async def find_issues(self, ctx: commands.Context, lang: str = "python", days: int = 90):
+    async def find_issues(self, ctx: commands.Context, lang: str = "python"):
         """Search GitHub for open-source candidate issues."""
         if not self.is_authorized(ctx):
             await ctx.send("❌ Permission denied. Only authorized bot operators can run issue search.")
@@ -80,157 +95,60 @@ class IssueFinder(commands.Cog):
 
         embed = discord.Embed(
             title="🔍 Searching Open-Source GitHub Issues",
-            description=f"Querying GitHub for **{lang}** issues (last {days} days)...",
+            description=f"Querying GitHub for open **{lang}** candidate issues...",
             color=discord.Color.blue()
         )
         msg = await ctx.send(embed=embed)
 
-        token = os.environ.get("GITHUB_TOKEN")
-        if not token:
-            await msg.edit(content="❌ `GITHUB_TOKEN` not found in environment.")
-            return
-
         try:
-            conn = db.connect()
-            cfg = config.merged(db.config_get(conn))
-            cfg["min_stars"] = 10
-            cfg["days"] = days
-            cfg["languages"] = [lang]
-
-            gh = github.GitHub(token)
-            query = f'is:issue is:open no:assignee label:"good first issue" language:{lang}'
-            items = list(gh.search_issues(query, max_pages=1))
-
-            kept = 0
-            results = []
-            for item in items[:25]:
-                if "pull_request" in item:
-                    continue
-                repo_name = "/".join(item["repository_url"].rsplit("/", 2)[-2:])
-                item["_repo_name"] = repo_name
-                reason = filters.apply_cheap(item, cfg)
-                passed = reason is None
-                if passed:
-                    kept += 1
-                    results.append((item["id"], repo_name, item["number"], item["title"], item["html_url"]))
-                
-                db.issue_upsert(conn, {
-                    "id": item["id"],
-                    "number": item["number"],
-                    "repo": repo_name,
-                    "title": item["title"],
-                    "url": item["html_url"],
-                    "body": (item.get("body") or "")[:8000],
-                    "labels": json.dumps([l["name"] for l in item.get("labels", [])]),
-                    "language": lang,
-                    "created_at": item.get("created_at"),
-                    "updated_at": item.get("updated_at"),
-                    "comments_count": item.get("comments", 0),
-                    "last_seen": db.now(),
-                    "score": 85.0 if passed else 15.0,
-                    "score_breakdown": "{}",
-                    "passed": int(passed),
-                    "reject_reason": reason,
-                })
+            url = f"https://api.github.com/search/issues?q=is:issue+is:open+no:assignee+label:%22good+first+issue%22+language:{lang}&per_page=15"
+            req = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json", "User-Agent": "issue-finder"})
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                items = data.get("items", [])
 
             res_embed = discord.Embed(
-                title=f"✅ Found {kept} Top Candidate Issues",
-                description=f"Saved candidate issues to Turso Cloud DB for language `{lang}`.",
+                title=f"✅ Found {len(items)} Open-Source Candidate Issues",
+                description=f"Candidate issues fetched for `{lang}`:",
                 color=discord.Color.green()
             )
-            for i, (iid, repo, num, title, url) in enumerate(results[:5], 1):
-                clean_title = title[:60].replace("[", "(").replace("]", ")")
-                val_text = f"[{clean_title}]({url})\nUse `!autofix {iid}` to solve and open PR"
+            for i, item in enumerate(items[:5], 1):
+                repo_name = "/".join(item["repository_url"].rsplit("/", 2)[-2:])
+                clean_title = item["title"][:60].replace("[", "(").replace("]", ")")
                 res_embed.add_field(
-                    name=f"{i}. {repo} #{num} (ID: {iid})",
-                    value=val_text,
+                    name=f"{i}. {repo_name} #{item['number']}",
+                    value=f"[{clean_title}]({item['html_url']})",
                     inline=False
                 )
             await msg.edit(embed=res_embed)
-
         except Exception as e:
-            await msg.edit(content=f"❌ Error during issue search: `{e}`")
+            await msg.edit(content=f"❌ Error fetching issues: `{e}`")
 
     @commands.command(name="queue", aliases=["listissues"])
     async def queue(self, ctx: commands.Context):
-        """View current top candidate issues stored in database."""
+        """View current top candidate issues stored in Turso Cloud DB."""
         try:
-            conn = db.connect()
-            rows = db.issues_query(conn, limit=10, passed_only=True)
+            rows = turso_query("SELECT repo, number, title, url, score, status FROM issues WHERE passed = 1 LIMIT 8")
             if not rows:
-                await ctx.send("ℹ️ No candidate issues in queue. Run `!findissues` first!")
+                await ctx.send("ℹ️ Queue empty. Run `!findissues python` to populate issues!")
                 return
 
             embed = discord.Embed(
                 title="📋 Open-Source Candidate Queue",
-                description="Top unhandled open-source issues ready for autonomous fixing:",
+                description="Top candidate issues in Turso Cloud Database:",
                 color=discord.Color.gold()
             )
             for r in rows:
-                d = dict(r)
-                clean_t = d['title'][:60].replace("[", "(").replace("]", ")")
-                val_text = f"[{clean_t}]({d['url']})\nScore: `{d['score']}` | Command: `!autofix {d['id']}`"
+                clean_t = str(r.get("title", ""))[:60].replace("[", "(").replace("]", ")")
+                status_str = str(r.get("status", "NEW")).upper()
                 embed.add_field(
-                    name=f"[{d['status'].upper()}] {d['repo']} #{d['number']} (ID: {d['id']})",
-                    value=val_text,
+                    name=f"[{status_str}] {r.get('repo')} #{r.get('number')}",
+                    value=f"[{clean_t}]({r.get('url')})",
                     inline=False
                 )
             await ctx.send(embed=embed)
         except Exception as e:
             await ctx.send(f"❌ Error reading queue: `{e}`")
-
-    @commands.command(name="autofix", aliases=["fixissue", "solve"])
-    async def autofix(self, ctx: commands.Context, issue_id: int):
-        """Autonomously solve issue, run test suite, and open Pull Request."""
-        if not self.is_authorized(ctx):
-            await ctx.send("❌ Permission denied. Only authorized bot operators can trigger PR autofix.")
-            return
-
-        embed = discord.Embed(
-            title=f"🛠️ Starting Autonomous Fix for Issue #{issue_id}",
-            description="Cloning repository locally, analyzing codebase, and running unit tests...",
-            color=discord.Color.purple()
-        )
-        msg = await ctx.send(embed=embed)
-
-        try:
-            conn = db.connect()
-            rows = db.issues_query(conn, limit=50, passed_only=False)
-            target_issue = None
-            for r in rows:
-                d = dict(r)
-                if d["id"] == issue_id or d["number"] == issue_id:
-                    target_issue = d
-                    break
-
-            if not target_issue:
-                await msg.edit(content=f"❌ Issue ID `{issue_id}` not found in queue.")
-                return
-
-            repo_full = target_issue["repo"]
-            issue_num = target_issue["number"]
-            await msg.edit(content=f"📥 Cloning `{repo_full}` Issue #{issue_num} workspace...")
-
-            proc = subprocess.run(
-                [sys.executable, str(ISSUE_FINDER_PATH / "autofix.py"), "--limit", "1"],
-                cwd=str(ISSUE_FINDER_PATH),
-                capture_output=True,
-                text=True,
-                timeout=300
-            )
-
-            res_embed = discord.Embed(
-                title=f"✅ Autofix Pipeline Execution Complete",
-                description=f"Target: `{repo_full}` Issue #{issue_num}\n**Status**: Local workspace verified with `pytest` unit test pass.",
-                color=discord.Color.green()
-            )
-            res_embed.add_field(name="Issue Title", value=target_issue['title'], inline=False)
-            res_embed.add_field(name="Issue Link", value=f"[View on GitHub]({target_issue['url']})", inline=False)
-            res_embed.add_field(name="Execution Output", value=f"```\n{proc.stdout[-500:]}\n```", inline=False)
-            await msg.edit(embed=res_embed)
-
-        except Exception as e:
-            await msg.edit(content=f"❌ Error during autofix execution: `{e}`")
 
 
 async def setup(bot: commands.Bot):
