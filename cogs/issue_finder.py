@@ -1,9 +1,9 @@
 """Discord Bot Cog: Issue Finder, Dashboard & Autonomous PR Fixer
 
 Commands:
-  !dashboard               - Get live link & passcode to the Web Command Dashboard
-  !findissues [lang] [days] - Search for candidate open-source issues
-  !queue                    - View top candidate issues in Turso DB
+  !dashboard               - Get live link & passcode to the Vercel Cloud Web Dashboard
+  !findissues [lang]       - Search for candidate open-source issues
+  !queue                    - View top candidate issues in Turso Cloud DB
 """
 
 import json
@@ -11,7 +11,6 @@ import os
 import urllib.request
 import discord
 from discord.ext import commands
-from pathlib import Path
 
 TURSO_URL = os.environ.get("TURSO_DATABASE_URL", "https://vortex-db-sohum123451.aws-ap-south-1.turso.io")
 TURSO_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3ODgxODY1MTQsImlkIjoiMDFhMDU4MzYtYzUwMS03NDk3LWE3YzAtYTc2Y2Y4MDRhNzUwIiwia2lkIjoieEJQLWZSdmFEYmtCaVdFNkt5WWtXdnY4WVF2SU5vZ3hvVng4SHVfM2VvYyIsInJpZCI6ImE0YTkwYmI1LTczNTYtNDMyOS04YjQyLTQ4MDEyOTUwMTMwZiJ9.8bUEXloF14KPlc_M_UjybZwvRTSIJCMuk2PldAt7dZToZjwxV5lE7bYEXlqDkLhQHepRJwoWf-nx5I_8smdcCA")
@@ -62,26 +61,25 @@ class IssueFinder(commands.Cog):
 
     @commands.command(name="dashboard", aliases=["web", "site", "dash"])
     async def dashboard(self, ctx: commands.Context):
-        """Get live link & passcode to the Web Command Dashboard."""
+        """Get live link & passcode to the Vercel Cloud Web Dashboard."""
         if not self.is_authorized(ctx):
             await ctx.send("❌ Permission denied. Only authorized bot operators can access dashboard links.")
             return
 
         embed = discord.Embed(
-            title="🌐 Issue Finder Web Command Dashboard",
-            description="Access your live web dashboard from any phone or computer:",
+            title="🌐 Issue Finder Cloud Web Dashboard",
+            description="Access your live 24/7 web dashboard anytime, anywhere (no localhost/tunnels):",
             color=discord.Color.blue()
         )
         embed.add_field(
-            name="🔗 Live Website URL",
-            value="[https://fine-geese-judge.loca.lt](https://fine-geese-judge.loca.lt)",
+            name="🔗 Vercel Cloud URL",
+            value="[https://issue-finder-omega.vercel.app](https://issue-finder-omega.vercel.app)",
             inline=False
         )
         embed.add_field(name="🔑 Passcode", value="`sohum2026`", inline=True)
-        embed.add_field(name="Verification IP", value="`182.66.218.121`", inline=True)
         embed.add_field(
-            name="🛡️ Security",
-            value="Passcode-protected | Turso Cloud Sync | Zero Token Leakage",
+            name="🛡️ Security & Cloud Sync",
+            value="Passcode Gate | Turso Cloud Sync | 24/7 Serverless Hosting",
             inline=False
         )
         await ctx.send(embed=embed)
